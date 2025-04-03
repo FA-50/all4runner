@@ -1,0 +1,23 @@
+{
+  "name": "all4runner",
+  "version": "1.0.0",
+  "description": "graduate project",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/FA-50/git_all4runner_repo.git"
+  },
+  "author": "lee",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/FA-50/git_all4runner_repo/issues"
+  },
+  "homepage": "https://github.com/FA-50/git_all4runner_repo#readme",
+  "dependencies": {
+    "jquery": "^3.7.1",
+    "ol": "^10.4.0"
+  }
+}
