@@ -1,14 +1,12 @@
-import React from 'react'
+import React, { useState } from 'react'
 import logo from '../img/all4runner_1.svg'
 import { FaTimes } from 'react-icons/fa'
 import { useGlobalContext } from '../Context/SidebarContext'
 import { FaHome } from 'react-icons/fa';
 import { Container, Row , Col } from 'react-bootstrap'
 import {Formik , Field , Form } from "formik"
-import {retrieveRouteApi1,retrieveRouteApi2} from '../axios/ApiOpenlayers'
+import {retrieveRouteApi} from '../axios/ApiOpenlayers'
 import {useMapContext} from '../Context/MapContext'
-
-
 
 import { GeoJSON } from 'ol/format';
 import  VectorSource from 'ol/source/Vector';
@@ -16,6 +14,7 @@ import  VectorLayer from 'ol/layer/Vector'
 import { Style, Stroke , Circle as CircleStyle , Fill} from 'ol/style'
 import { Point } from 'ol/geom'
 import {Feature} from 'ol'
+
 
 
 const SidebarMap = () => {
@@ -28,11 +27,14 @@ const SidebarMap = () => {
 
   // json 배열을통해 벡터데이터 생성
   const AddingJSONLayerToMap = ( jsonarr )=>{
-    
+    // 횡단보도 수 카운트
+    var featurearr =[]
+    // useReducer를 이용한 mapstate 초기화 
     mapdispatch({type:"getmap"})
+
     // 현재 map객체에 포함된 layer 갯수 가져오기
     const maplayerlength = mapstate.getLayers().array_.length
-    if ( maplayerlength > 3)
+    if ( maplayerlength > 2)
     { // map에서 해당 index의 layer를 가져온 후 map에서 삭제
       var i=0;
       for(i=1;i<maplayerlength;i++){
@@ -40,41 +42,48 @@ const SidebarMap = () => {
         mapstate.removeLayer(layerinstance) 
       }
     }
-    
-    var geojsonarr =[]
+
+    // 각 행의 json 데이터를 각각의 feature 데이터로 생성
     i=0
     jsonarr.map((json)=>{
-      geojsonarr[i]=new GeoJSON().readFeature(json.geojson,{featureProjection: 'EPSG:4326'})
+      console.log(json)
+      var geojsonfeature = new GeoJSON().readFeature(json.geojson,{featureProjection: 'EPSG:4326'})
+      // 보행로 종류 별 색상 배정
+      // 해당 link가 횡단보도 인 경우 붉은색
+      if(json.crosswalk==1){ 
+        geojsonfeature.setStyle(new Style({ stroke : new Stroke({color :'#ff0000',width : 5})}))
+      }else if(json.footbridge == 1 | json.bridge == 1){
+        // 다리, 육교인 경우 오렌지색
+        geojsonfeature.setStyle(new Style({ stroke : new Stroke({color :'#FFA500',width : 5})}))
+      }else if(json.park==1){
+        // 공원, 녹지 길인 경우 녹색
+        geojsonfeature.setStyle(new Style({ stroke : new Stroke({color :'#32CD32',width : 5})}))
+      }else if(json.subwaynetw==1 | json.tunnel==1){
+        // 터널, 지하철네트워크인 경우 회색 
+        geojsonfeature.setStyle(new Style({ stroke : new Stroke({color :'#708090',width : 5})}))
+      }else{
+        // 모두 해당하지 않는 경우 갈색
+        geojsonfeature.setStyle(new Style({ stroke : new Stroke({color :'#D2691E',width : 5})}))
+      };
+
+      featurearr[i]= geojsonfeature
       i=i+1
-    })
+  })
+
+
     const jsonvectorsource = new VectorSource({
-      features : geojsonarr
+      features : featurearr
     })
     const jsonvectorlayer = new VectorLayer({
       source : jsonvectorsource,
-      style : new Style({
-        stroke : new Stroke({
-          color : '#ff0000',
-          width : 5,
-          lineDash : [5,10],
-        })
-      }),
       zIndex:100,
     })
+    // Context에서 Global State로서 전달된 Map instance에 Layer 추가
     mapstate.addLayer(jsonvectorlayer)
+    // Vector Layer 생성 시 Vector Source의 geom 범위로 Viewport의 확대를 수행
+    mapstate.getView().fit(jsonvectorsource.getExtent(),{duration:500})
     console.log(mapstate.getLayers())
-  }
-
-
-  // Axios를 통해 노드를 입력하여여 루트를 생성
-  const createRoute= ({fnode,tnode,distance})=>{
-    retrieveRouteApi1(fnode,tnode,distance)
-    .then((result)=>{
-      console.log(result)
-      AddingJSONLayerToMap(result.data)
-    })
-    .catch((error)=>{console.log(error)})
-    .finally(console.log("실행끝"))
+    console.log(`총 거리 : ${jsonarr[jsonarr.length-1].totdistance}`)
   }
 
   // Map상에 경로 생성을 위해 클릭 시 포인트생성하는 함수
@@ -132,7 +141,7 @@ const SidebarMap = () => {
           distance : distance
         }
         // 경로 생성을 위한한 API 호출 
-        retrieveRouteApi2(coorddistanceobject)
+        retrieveRouteApi(coorddistanceobject)
         .then((result)=>{
           AddingJSONLayerToMap(result.data)
         })
@@ -146,7 +155,8 @@ const SidebarMap = () => {
     
   }
 
-  
+
+
 
   return (
     <>
@@ -164,48 +174,6 @@ const SidebarMap = () => {
                     {<FaHome />}
                     {"home"}
                   </a>
-          </li>
-          <li>
-          <hr/>
-            {
-              <Formik initialValues={{ }}
-                      enableReinitialize={true}
-                      onSubmit={(value)=>{createRoute(value)}}>
-                        {
-                          (props)=>(
-                            <Form className="container-fluid">
-                                <Container>
-                                  <Row>
-                                    <Col xs={6} md={6} lg={6}>
-                                      <fieldset className="from-group">
-                                        <label htmlFor="fnodeid" className="form-label">Fnode</label>
-                                        <Field required = "required" type="text" className="form-control" id="fnodeid" name="fnode" placeholder='시작노드'/>
-                                      </fieldset>
-                                    </Col>
-                                    <Col xs={6} md={6} lg={6}>
-                                      <fieldset className="from-group">
-                                        <label htmlFor="tnodeid" className="form-label">Tnode</label>
-                                        <Field type="text" required = "required" className="form-control" id="tnodeid" name="tnode" placeholder='끝노드'/>
-                                      </fieldset>
-                                    </Col>
-                                  </Row>
-                                  <Row style={{marginTop:30}}>
-                                  <Col xs={6} md={6} lg={6}>
-                                    <fieldset className="from-group">
-                                      <label htmlFor="distanceid" className="form-label">Distance</label>
-                                      <Field required = "required" type="text" className="form-control" name="distance" id="distanceid" placeholder='거리'/>
-                                    </fieldset>
-                                  </Col>
-                                  <Col xs={3} md={3} lg={3}>
-                                    <button type="submit" className="btn btn-primary" style={{marginTop:30}}>Submit</button>
-                                  </Col>
-                                  </Row>
-                                </Container>
-                              </Form>
-                          )
-                        }
-                      </Formik>
-            }
           </li>
           <li>
           <hr/>
