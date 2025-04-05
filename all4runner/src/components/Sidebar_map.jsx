@@ -1,4 +1,4 @@
-import React from 'react'
+import React, {useState} from 'react'
 import logo from '../img/all4runner_1.svg'
 import { FaTimes } from 'react-icons/fa'
 import { useGlobalContext } from '../Context/SidebarContext'
@@ -21,9 +21,10 @@ const SidebarMap = () => {
   const { isSidebarOpen , closeSidebar } = useGlobalContext()
   const { mapstate,mapdispatch } = useMapContext()
 
+  const [ exploreopt , setExploreOption ] = useState(null)
+
   // dispatch를 통해 useReducer 초기화
   mapdispatch({type:"getmap"})
-
 
   // json 배열을통해 벡터데이터 생성
   const AddingJSONLayerToMap = ( jsonarr )=>{
@@ -111,17 +112,16 @@ const SidebarMap = () => {
   }
   
   // 마우스 클릭으로 최적경로를 생성하는 콜백함수
-  const createRoutebyMouse = ({distance,checkboxexclude})=>{
-
+  const createRoutebyMouse = ({distanceshort,checkboxshortexclude})=>{
     // 횡단보도, 육교 제외여부
     var excludeoption;
-    if (checkboxexclude[0]==undefined){
+    if (checkboxshortexclude[0]==undefined){
       // 횡단보도, 육교 전부 포함시 1
       excludeoption = 1
-    }else if(checkboxexclude.length==1 && checkboxexclude[0]=="crosswalk"){
+    }else if(checkboxshortexclude.length==1 && checkboxshortexclude[0]=="crosswalk"){
       // 횡단보도 제외 시 2
       excludeoption = 2
-    }else if(checkboxexclude.length==1 && checkboxexclude[0]=="bridge"){
+    }else if(checkboxshortexclude.length==1 && checkboxshortexclude[0]=="bridge"){
       // 육교 제외 시 3
       excludeoption = 3
     }else{
@@ -155,12 +155,13 @@ const SidebarMap = () => {
           txcoord : tcoord[0],
           fycoord : fcoord[1],
           tycoord : tcoord[1],
-          distance : distance,
+          distance : distanceshort,
           excludeoption : excludeoption
         }
         // 경로 생성을 위한한 API 호출 
         retrieveRouteApi(coorddistanceobject)
         .then((result)=>{
+          console.log(result)
           AddingJSONLayerToMap(result.data)
         })
         .catch((error)=>{console.log(error)})
@@ -194,43 +195,116 @@ const SidebarMap = () => {
                     {"home"}
                   </a>
           </li>
+          <hr style={{width:"90%"}} />
           <li>
-            <hr style={{width:"90%"}} />
+          <div className="dropdown">
+            <button className="btn btn-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+            경로탐색
+            </button>
+            <ul className="dropdown-menu">
+            <li><button className="dropdown-item" onClick={()=>{setExploreOption(1)}}>최단경로탐색</button></li>
+            <li><button className="dropdown-item" onClick={()=>{setExploreOption(2)}}>최적경로탐색</button></li>
+            </ul>
+          </div>
           </li>
+          <hr style={{width:"90%"}} />
+          { exploreopt == 1 ? 
+            <li>
+            <h3>최단경로탐색</h3>
+            <hr style={{width:"50%"}} />
+              {
+                <Formik initialValues={{ }}
+                enableReinitialize={true}
+                onSubmit={(value)=>{createRoutebyMouse(value)}}>
+                  {
+                    (props)=>(
+                      <Form className="container-fluid">
+                          <Container>
+                            <Row>
+                              <fieldset className="form-group">
+                                <div className="form-check form-check-inline">
+                                  <Field className="form-check-input" type="checkbox" value={"crosswalk"} name="checkboxshortexclude" id="checkboxshortexcludecrosswalkid" />
+                                  <label className="form-check-label" htmlFor="checkboxshortexcludecrosswalkid">횡단보도제외</label>
+                                </div>
+                                <div className="form-check form-check-inline">
+                                  <Field className="form-check-input" type="checkbox" value={"bridge"} name="checkboxshortexclude" id="checkboxshortexcludefootbridgeid"/>
+                                  <label className="form-check-label" htmlFor="checkboxshortexcludefootbridgeid">육교제외</label>
+                                </div>
+                              </fieldset>
+                            </Row>
+                            <Row style={{marginTop:10}}>
+                            <hr style={{width:"90%"}} />
+                            <Col xs={6} md={6} lg={6}>
+                              <fieldset className="from-group">
+                                <label htmlFor="distanceshortid" className="form-label">최대거리설정</label>
+                                <Field required = "required" type="text" className="form-control" name="distanceshort" id="distanceshortid" placeholder='거리'/>
+                              </fieldset>
+                            </Col>
+                            <Col xs={6} md={6} lg={6}>
+                              <button type="submit" className="btn btn-primary" style={{marginTop:30}}>경로생성</button>
+                            </Col>
+                            </Row>
+                            <hr style={{width:"90%"}} />
+                          </Container>
+                        </Form>
+                    )
+                  }
+                </Formik>
+              }
+            </li>
+          : <div/>}
+          { exploreopt == 2 ?
           <li>
-          <h3>최단경로탐색</h3>
+          <h3>최적경로탐색</h3>
           <hr style={{width:"50%"}} />
             {
-              <Formik initialValues={{ }}
+              <Formik initialValues={{weightslope:5}}
               enableReinitialize={true}
-              onSubmit={(value)=>{createRoutebyMouse(value)}}>
+              onSubmit={(value)=>{console.log(value);createRoutebyMouse(value)}}>
                 {
                   (props)=>(
                     <Form className="container-fluid">
                         <Container>
                           <Row>
                             <fieldset className="form-group">
+                              <label htmlFor="weightslopeid" className="form-label">경사도 가중치</label>
+                              <Field type="range" name="weightslope" className="form-range" min="0" max="10" step="0.5" id="weightslopeid" style={{width:"90%"}}/>
+                            </fieldset>
+                            <fieldset className="form-group">
+                              <label htmlFor="weightslopeid" className="form-label">화장실 가중치</label>
+                              <Field type="range" name="weightslope" className="form-range" min="0" max="10" step="0.5" id="weightslopeid" style={{width:"90%"}}/>
+                            </fieldset>
+                            <fieldset className="form-group">
+                              <label htmlFor="weightslopeid" className="form-label">급수대 가중치</label>
+                              <Field type="range" name="weightslope" className="form-range" min="0" max="10" step="0.5" id="weightslopeid" style={{width:"90%"}}/>
+                            </fieldset>
+                          </Row>
+                          <Row>
+                            <fieldset className="form-group">
+                              <hr style={{width:"90%"}} />
                               <div className="form-check form-check-inline">
-                                <Field className="form-check-input" type="checkbox" value={"crosswalk"} name="checkboxexclude" id="checkboxexcludecrosswalkid" />
-                                <label className="form-check-label" htmlFor="checkboxexcludecrosswalkid">횡단보도제외</label>
+                                <Field className="form-check-input" type="checkbox" value={"crosswalk"} name="checkboxoptimalexclude" id="checkboxoptimalexcludecrosswalkid" />
+                                <label className="form-check-label" htmlFor="checkboxoptimalexcludecrosswalkid">횡단보도제외</label>
                               </div>
                               <div className="form-check form-check-inline">
-                                <Field className="form-check-input" type="checkbox" value={"bridge"} name="checkboxexclude" id="checkboxexcludefootbridgeid"/>
-                                <label className="form-check-label" htmlFor="checkboxexcludefootbridgeid">육교제외</label>
+                                <Field className="form-check-input" type="checkbox" value={"bridge"} name="checkboxoptimalexclude" id="checkboxoptimalexcludefootbridgeid"/>
+                                <label className="form-check-label" htmlFor="checkboxoptimalexcludefootbridgeid">육교제외</label>
                               </div>
                             </fieldset>
                           </Row>
                           <Row style={{marginTop:10}}>
+                          <hr style={{width:"90%"}} />
                           <Col xs={6} md={6} lg={6}>
                             <fieldset className="from-group">
-                              <label htmlFor="distanceid" className="form-label">최대거리설정</label>
-                              <Field required = "required" type="text" className="form-control" name="distance" id="distanceid" placeholder='거리'/>
+                              <label htmlFor="distanceoptimalid" className="form-label">최대거리설정</label>
+                              <Field required = "required" type="text" className="form-control" name="distanceoptimal" id="distanceoptimalid" placeholder='거리'/>
                             </fieldset>
                           </Col>
                           <Col xs={6} md={6} lg={6}>
                             <button type="submit" className="btn btn-primary" style={{marginTop:30}}>경로생성</button>
                           </Col>
                           </Row>
+                          <hr style={{width:"90%"}} />
                         </Container>
                       </Form>
                   )
@@ -238,8 +312,7 @@ const SidebarMap = () => {
               </Formik>
             }
           </li>
-          <hr style={{width:"90%"}} />
-
+          : <div/>}
         </ul>
       </aside>
     </>

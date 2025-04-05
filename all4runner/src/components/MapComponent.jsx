@@ -25,7 +25,7 @@ const MapComponent = ({children})=>{
           showLabels:true,
           zIndex:4
         });
-        break
+        break;
       case "settoilet":
         const toiletsource = new VectorSource({
           format:new GeoJSON(),
@@ -43,8 +43,7 @@ const MapComponent = ({children})=>{
           })
         })
         toiletlayer.setMap(map)
-        console.log(111)
-        break
+        break;
       case "setborder":
         const borderimagesource = new TileWMS({
           url:'http://localhost:8080/geoserver/all4runner/wms',
@@ -61,7 +60,7 @@ const MapComponent = ({children})=>{
           zIndex:20,
         })
         tileLayer.setMap(map)
-        break
+        break;
       default:
         return undefined;
     }
@@ -93,7 +92,7 @@ const MapComponent = ({children})=>{
     setMap(Mapinstance)
     // graticule 설정하도록 설정.
     mapdispatch({type:"setgraticule"})
-    // mapdispatch({type:"settoilet"})
+    //mapdispatch({type:"settoilet"})
     // useReducer를 통해 동대문구 border 설정
     mapdispatch({type:"setborder"})
     return () => Mapinstance.setTarget(undefined)
