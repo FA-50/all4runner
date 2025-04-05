@@ -46,7 +46,6 @@ const SidebarMap = () => {
     // 각 행의 json 데이터를 각각의 feature 데이터로 생성
     i=0
     jsonarr.map((json)=>{
-      console.log(json)
       var geojsonfeature = new GeoJSON().readFeature(json.geojson,{featureProjection: 'EPSG:4326'})
       // 보행로 종류 별 색상 배정
       // 해당 link가 횡단보도 인 경우 붉은색
@@ -112,7 +111,26 @@ const SidebarMap = () => {
   }
   
   // 마우스 클릭으로 최적경로를 생성하는 콜백함수
-  const createRoutebyMouse = ({distance})=>{
+  const createRoutebyMouse = ({distance,checkboxexclude})=>{
+
+    console.log(checkboxexclude)
+    // 횡단보도, 육교 제외여부
+    var excludeoption;
+    if (checkboxexclude[0]==undefined){
+      // 횡단보도, 육교 전부 포함시 1
+      excludeoption = 1
+    }else if(checkboxexclude.length==1 && checkboxexclude[0]=="crosswalk"){
+      // 횡단보도 제외 시 2
+      excludeoption = 2
+    }else if(checkboxexclude.length==1 && checkboxexclude[0]=="bridge"){
+      // 육교 제외 시 3
+      excludeoption = 3
+    }else{
+      // 횡단보도, 육교 제외 시 4
+      excludeoption = 4
+    }
+
+
     // 초기값
     var coordarr = []
     var iter=0
@@ -138,7 +156,8 @@ const SidebarMap = () => {
           txcoord : tcoord[0],
           fycoord : fcoord[1],
           tycoord : tcoord[1],
-          distance : distance
+          distance : distance,
+          excludeoption : excludeoption
         }
         // 경로 생성을 위한한 API 호출 
         retrieveRouteApi(coorddistanceobject)
@@ -163,48 +182,66 @@ const SidebarMap = () => {
       <aside className={`${isSidebarOpen? 'sidebar show-sidebar':'sidebar'}`}>
         <div className="sidebar-header">
         <img src={logo} width="300" height="auto" alt="error from img" />
-        <button className="close-btn" onClick={closeSidebar}>
+        <button className="close-btn" onClick={closeSidebar} >
           < FaTimes />
         </button>
         </div>
         {/* 사이드바 메뉴 */}
-        <ul className="links">
+        <ul className="links" style={{marginTop:"-30px"}}>
+        <hr style={{width:"90%"}} />
           <li key={1}>
-                  <a href={"/"}>
+                  <a href={"/"} style={{width:"90%"}}>
                     {<FaHome />}
                     {"home"}
                   </a>
           </li>
           <li>
-          <hr/>
+            <hr style={{width:"90%"}} />
+          </li>
+          <li>
+          <h3>최단경로탐색</h3>
+          <hr style={{width:"50%"}} />
             {
               <Formik initialValues={{ }}
-                      enableReinitialize={true}
-                      onSubmit={(value)=>{createRoutebyMouse(value)}}>
-                        {
-                          (props)=>(
-                            <Form className="container-fluid">
-                                <Container>
-                                  <Row style={{marginTop:30}}>
-                                  <Col xs={6} md={6} lg={6}>
-                                    <fieldset className="from-group">
-                                      <label htmlFor="distanceid" className="form-label">Distance</label>
-                                      <Field required = "required" type="text" className="form-control" name="distance" id="distanceid" placeholder='거리'/>
-                                    </fieldset>
-                                  </Col>
-                                  <Col xs={6} md={6} lg={6}>
-                                    <button type="submit" className="btn btn-primary" style={{marginTop:30}}>경로생성</button>
-                                  </Col>
-                                  </Row>
-                                </Container>
-                              </Form>
-                          )
-                        }
-                      </Formik>
+              enableReinitialize={true}
+              onSubmit={(value)=>{createRoutebyMouse(value)}}>
+                {
+                  (props)=>(
+                    <Form className="container-fluid">
+                        <Container>
+                          <Row>
+                            <fieldset className="form-group">
+                              <div className="form-check form-check-inline">
+                                <Field className="form-check-input" type="checkbox" value={"crosswalk"} name="checkboxexclude" id="checkboxexcludecrosswalkid" />
+                                <label className="form-check-label" htmlFor="checkboxexcludecrosswalkid">횡단보도제외</label>
+                              </div>
+                              <div className="form-check form-check-inline">
+                                <Field className="form-check-input" type="checkbox" value={"bridge"} name="checkboxexclude" id="checkboxexcludefootbridgeid"/>
+                                <label className="form-check-label" htmlFor="checkboxexcludefootbridgeid">육교제외</label>
+                              </div>
+                            </fieldset>
+                          </Row>
+                          <Row style={{marginTop:10}}>
+                          <Col xs={6} md={6} lg={6}>
+                            <fieldset className="from-group">
+                              <label htmlFor="distanceid" className="form-label">최대거리설정</label>
+                              <Field required = "required" type="text" className="form-control" name="distance" id="distanceid" placeholder='거리'/>
+                            </fieldset>
+                          </Col>
+                          <Col xs={6} md={6} lg={6}>
+                            <button type="submit" className="btn btn-primary" style={{marginTop:30}}>경로생성</button>
+                          </Col>
+                          </Row>
+                        </Container>
+                      </Form>
+                  )
+                }
+              </Formik>
             }
           </li>
+          <hr style={{width:"90%"}} />
+
         </ul>
-        <hr />
       </aside>
     </>
   )

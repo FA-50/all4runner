@@ -3,7 +3,7 @@ import ReactDOM from 'react-dom/client';
 import './index.css';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import 'bootstrap/dist/js/bootstrap.min.js';
-import 'ol/ol.css'
+import './css/ol.css'
 import 'ol/dist/ol.js'
 import './css/sidebar.css'
 

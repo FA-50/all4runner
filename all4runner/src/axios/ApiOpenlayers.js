@@ -2,7 +2,7 @@ import axios from 'axios'
 const apiClient = axios.create(
   {
     baseURL : "http://localhost:7070",
-    timeout : 5000
+    timeout : 10000
   })
 
 // 좌표기반으로 최단경로를 도출하는 axios api
