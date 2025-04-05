@@ -20,11 +20,12 @@ const MapComponent = ({children})=>{
         return map
         // graticule 설정
       case "setgraticule":
-        const gridMapLayer = new Graticule({
+        new Graticule({
           map:map,
           showLabels:true,
           zIndex:4
         });
+        break
       case "settoilet":
         const toiletsource = new VectorSource({
           format:new GeoJSON(),
@@ -43,6 +44,7 @@ const MapComponent = ({children})=>{
         })
         toiletlayer.setMap(map)
         console.log(111)
+        break
       case "setborder":
         const borderimagesource = new TileWMS({
           url:'http://localhost:8080/geoserver/all4runner/wms',
@@ -59,6 +61,7 @@ const MapComponent = ({children})=>{
           zIndex:20,
         })
         tileLayer.setMap(map)
+        break
       default:
         return undefined;
     }

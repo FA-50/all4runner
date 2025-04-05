@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React from 'react'
 import logo from '../img/all4runner_1.svg'
 import { FaTimes } from 'react-icons/fa'
 import { useGlobalContext } from '../Context/SidebarContext'
@@ -113,7 +113,6 @@ const SidebarMap = () => {
   // 마우스 클릭으로 최적경로를 생성하는 콜백함수
   const createRoutebyMouse = ({distance,checkboxexclude})=>{
 
-    console.log(checkboxexclude)
     // 횡단보도, 육교 제외여부
     var excludeoption;
     if (checkboxexclude[0]==undefined){
