@@ -18,11 +18,17 @@ import {Feature} from 'ol'
 
 
 const SidebarMap = () => {
+  // 사이드바를 Context에서 가져옴옴
   const { isSidebarOpen , closeSidebar } = useGlobalContext()
+  // useReducer을 통한 map instance 불러오기
   const { mapstate,mapdispatch } = useMapContext()
 
+  // 육교, 횡단보도 state
   const [ exploreopt , setExploreOption ] = useState(null)
-
+  // 버튼 지정 안내문 표시 여부
+  const [ showguide1,setShowGuide1 ] = useState(false)
+  // 경로 생성 에러 안내문 표시 여부
+  const [ showguide2, setShowGuide2 ] = useState(false)
   // dispatch를 통해 useReducer 초기화
   mapdispatch({type:"getmap"})
 
@@ -111,8 +117,10 @@ const SidebarMap = () => {
     mapstate.render()
   }
   
-  // 마우스 클릭으로 최적경로를 생성하는 콜백함수
+  // 마우스 클릭으로 최단경로를 생성하는 콜백함수
   const createRoutebyMouse = ({distanceshort,checkboxshortexclude})=>{
+    setShowGuide1(true)
+    setShowGuide2(false)
     // 횡단보도, 육교 제외여부
     var excludeoption;
     if (checkboxshortexclude[0]==undefined){
@@ -147,7 +155,8 @@ const SidebarMap = () => {
         const [fcoord,tcoord] = coordarr
         // 이벤트 해제
         mapstate.un('click',addcoord)
-
+        // 안내문 해제
+        setShowGuide1(false)
 
         // Spring에서 @RequestBody로 받을 Object 객체 정의하기.
         const coorddistanceobject = {
@@ -164,7 +173,11 @@ const SidebarMap = () => {
           console.log(result)
           AddingJSONLayerToMap(result.data)
         })
-        .catch((error)=>{console.log(error)})
+        .catch((error)=>{
+          // 오류발생시 안내문 표시
+          console.log(error)
+          setShowGuide2(true)
+        })
         .finally(console.log("실행끝"))
         console.log("실행끝")
       }
@@ -204,6 +217,7 @@ const SidebarMap = () => {
             <ul className="dropdown-menu">
             <li><button className="dropdown-item" onClick={()=>{setExploreOption(1)}}>최단경로탐색</button></li>
             <li><button className="dropdown-item" onClick={()=>{setExploreOption(2)}}>최적경로탐색</button></li>
+            <li><button className="dropdown-item" onClick={()=>{setExploreOption(3)}}>왕복최적경로탐색</button></li>
             </ul>
           </div>
           </li>
@@ -245,6 +259,8 @@ const SidebarMap = () => {
                             </Col>
                             </Row>
                             <hr style={{width:"90%"}} />
+                            { showguide1 ? <div>맵 상단에 이동할 구간을 클릭하세요.</div> : <div></div> }
+                            { showguide2 ? <div>경로 생성에 문제가 발생했습니다.</div> : <div></div> }
                           </Container>
                         </Form>
                     )
@@ -258,7 +274,7 @@ const SidebarMap = () => {
           <h3>최적경로탐색</h3>
           <hr style={{width:"50%"}} />
             {
-              <Formik initialValues={{weightslope:5}}
+              <Formik initialValues={{weightslope:5.5, weighttoilet:5, weightdrink:5, weightcrosswalk:5 }}
               enableReinitialize={true}
               onSubmit={(value)=>{console.log(value);createRoutebyMouse(value)}}>
                 {
@@ -268,15 +284,19 @@ const SidebarMap = () => {
                           <Row>
                             <fieldset className="form-group">
                               <label htmlFor="weightslopeid" className="form-label">경사도 가중치</label>
-                              <Field type="range" name="weightslope" className="form-range" min="0" max="10" step="0.5" id="weightslopeid" style={{width:"90%"}}/>
+                              <Field type="range" name="weightslope" className="form-range" min="1" max="11" step="0.5" id="weightslopeid" style={{width:"90%"}}/>
                             </fieldset>
                             <fieldset className="form-group">
-                              <label htmlFor="weightslopeid" className="form-label">화장실 가중치</label>
-                              <Field type="range" name="weightslope" className="form-range" min="0" max="10" step="0.5" id="weightslopeid" style={{width:"90%"}}/>
+                              <label htmlFor="weighttoiletid" className="form-label">화장실 가중치</label>
+                              <Field type="range" name="weighttoilet" className="form-range" min="0" max="10" step="0.5" id="weighttoiletid" style={{width:"90%"}}/>
                             </fieldset>
                             <fieldset className="form-group">
-                              <label htmlFor="weightslopeid" className="form-label">급수대 가중치</label>
-                              <Field type="range" name="weightslope" className="form-range" min="0" max="10" step="0.5" id="weightslopeid" style={{width:"90%"}}/>
+                              <label htmlFor="weightdrinkid" className="form-label">급수대 가중치</label>
+                              <Field type="range" name="weightdrink" className="form-range" min="0" max="10" step="0.5" id="weightdrinkid" style={{width:"90%"}}/>
+                            </fieldset>
+                            <fieldset className="form-group">
+                              <label htmlFor="weightcrosswalkid" className="form-label">횡단보도 가중치</label>
+                              <Field type="range" name="weightcrosswalk" className="form-range" min="0" max="10" step="0.5" id="weightcrosswalkid" style={{width:"90%"}}/>
                             </fieldset>
                           </Row>
                           <Row>
