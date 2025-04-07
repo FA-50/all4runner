@@ -32,7 +32,7 @@ const SidebarMap = () => {
   mapdispatch({type:"getmap"})
 
 
-  // Map상의 모든 Layer 삭제하는 함수수
+  // Map상의 모든 Layer 삭제하는 함수
   const deleteAllLayer = () =>{
     // 현재 map객체에 포함된 layer 갯수 가져오기
     var maplayerlength = mapstate.getLayers().array_.length 
@@ -105,6 +105,11 @@ const SidebarMap = () => {
     if (jsonarr.length==0){
       setShowGuide2(true)
     }else{
+      var maplayerlength = mapstate.getLayers().array_.length 
+      if (maplayerlength > 2)
+      {
+        deleteAllLayer()
+      }
       // 각 행의 json 데이터를 각각의 feature 데이터로 생성하여 
       // Feature 배열로 반환.
       var featurearr = MakeFeatureFromJSON(jsonarr)
@@ -124,9 +129,13 @@ const SidebarMap = () => {
     }
   }
 
+
+
   // 마우스 클릭으로 최단경로를 생성하는 콜백함수
   const createRoutebyMouse = ({distanceshort,checkboxshortexclude})=>{
+    // 점 클릭 메시지 지시
     setShowGuide1(true)
+     // 오류 발생 메시지 표시 x
     setShowGuide2(false)
     var excludeoption; 
     // 횡단보도, 육교 제외여부
@@ -147,6 +156,8 @@ const SidebarMap = () => {
     // 초기 설정
     var coordarr = []
     var iter=0
+    var clickend = false
+
     // 클릭이벤트로로 얻는 좌표를 배열로 넣는 콜백함수
     const addcoord = (evt) => {
       // 좌표 획득 후 배열에 입력 및 포인트 생성
@@ -154,27 +165,40 @@ const SidebarMap = () => {
       coordarr[iter]=clickedcoord
       // 해당 좌표로 포인트를 생성하는 함수
       createPoint(coordarr[iter++])
-      // 좌표배열 갯수가 2개 이상일때 작용
-      if (coordarr.length >= 2){
-        
-        // 시작 xy좌표와 목표 xy좌표 배열을 구조분해
-        const [fcoord,tcoord] = coordarr
+
+
+      // 더블 클릭 후 dblclick 이벤트 작동 시 작용
+      if (clickend){
         // 이벤트 해제
         mapstate.un('click',addcoord)
         // 안내문 해제
         setShowGuide1(false)
 
+        // 포인트 총 갯수
+        var totalpointcount = coordarr.length;
+        var xcoord = ""
+        var ycoord = ""
+        // , 로 구분되는 위도 , 경도 좌표의 문자열을 생성.
+        for( var i=0;i<totalpointcount;i++){
+          if (i==totalpointcount-1){
+            xcoord += coordarr[i][0].toString()
+            ycoord += coordarr[i][1].toString()
+          }else{
+            xcoord = xcoord + coordarr[i][0].toString() + ","
+            ycoord += coordarr[i][1].toString() + ","
+          }
+        }
+        
         // Spring에서 @RequestBody로 받을 Object 객체 정의하기.
         const coorddistanceobject = {
-          fxcoord : fcoord[0],
-          txcoord : tcoord[0],
-          fycoord : fcoord[1],
-          tycoord : tcoord[1],
+          xcoord : xcoord,
+          ycoord : ycoord,
+          totpointcount : totalpointcount,
           distance : distanceshort,
           excludeoption : excludeoption
         }
         // 경로 생성을 위한한 API 호출 
-        retrieveRouteApi(coorddistanceobject)
+        retrieveRouteApiStopOver(coorddistanceobject)
         .then((result)=>{
           AddingJSONLayerToMap(result.data)
         })
@@ -187,107 +211,10 @@ const SidebarMap = () => {
         .finally(console.log("실행끝"))
       }
     }
-    // 이벤트 실행
+    // 선 생성 이벤트 실행
     mapstate.on('click',addcoord)
-  }
-
-
-
-
-
-  // 경유지 선택 시의 json 배열을 입력받아서 경로생성
-  const AddingJSONLayerToMapStopOver = ( jsonarr )=>{
-    // 빈 배열의 GeoJSON 입력 시 오류 표시시 
-    if (jsonarr.length==0){
-      setShowGuide1(false)
-    }else{
-      // 각 행의 json 데이터를 각각의 feature 데이터로 생성하여 
-      // Feature 배열로 반환.
-      var featurearr = MakeFeatureFromJSON(jsonarr)
-      
-      var jsonvectorsource2 = new VectorSource({
-        features : featurearr
-      })
-      var jsonvectorlayer2 = new VectorLayer({
-        source : jsonvectorsource2,
-        zIndex:100,
-      })
-      // Context에서 Global State로서 전달된 Map instance에 Layer 추가
-      mapstate.addLayer(jsonvectorlayer2)
-    }
-  }
-
-
-
-  const createRouteWithStopOver = ({checkboxshortexclude})=>{
-    // 점 클릭 메시지 지시
-    setShowGuide1(true)
-    // 오류 발생 메시지 표시 x
-    setShowGuide2(false)
-
-    // 횡단보도, 육교 제외여부
-    var excludeoption = 1
-
-    // 초기값
-    var coordarr = []
-    var iter=0
-    var clickend = false
-
-    // 클릭이벤트로로 얻는 좌표를 배열로 넣는 콜백함수
-    const addcoord = (evt) => {
-
-      // 좌표 획득 후 배열에 입력 및 포인트 생성
-      var clickedcoord = evt.coordinate;
-      coordarr[iter]=clickedcoord
-
-      // 해당 좌표로 포인트를 생성하는 함수 실행
-      createPoint(coordarr[iter++])
-
-      // 배열에 2개 이상 요소 존재 시
-      if (coordarr.length >= 2){
-        
-        // 시작 xy좌표와 목표 xy좌표 배열을 구조분해
-        const [fcoord,tcoord] = coordarr
-
-
-        // Spring에서 @RequestBody로 받을 Object 객체 정의하기.
-        const coorddistanceobject = {
-          fxcoord : fcoord[0],
-          txcoord : tcoord[0],
-          fycoord : fcoord[1],
-          tycoord : tcoord[1],
-          excludeoption : excludeoption
-        }
-        // 경로 생성을 위한 API 호출 
-        retrieveRouteApiStopOver(coorddistanceobject)
-        .then((result)=>{
-          // 레이어 생성 함수 작동
-          AddingJSONLayerToMapStopOver(result.data)
-        })
-        .catch((error)=>{
-          console.log(error)
-          // 이벤트 해제
-          mapstate.un('click',addcoord)
-          setShowGuide1(false)
-        })
-        .finally(console.log("실행끝"))
-
-        // 더블 클릭 시 점생성 중단
-        if(clickend){
-          // 이벤트 해제
-          mapstate.un('click',addcoord)
-          // 안내문 해제
-          setShowGuide1(false)
-        }
-        // 앞 요소 삭제하여 초기화하여 반복 수행.
-        coordarr.shift()
-        iter=1
-      }
-    }
-    // 클릭 이벤트 : 선 생성 시작
-    mapstate.on('click',addcoord)
-    // 더블클릭 이벤트 : 선 생성 끝
-    mapstate.on('dblclick',()=>{clickend=true}) 
+    // 더블클릭 이벤트 : 포인트 생성 끝
+    mapstate.on('dblclick',()=>{clickend=true})
   }
 
 
@@ -315,19 +242,15 @@ const SidebarMap = () => {
             <Row>
               <Col xs={6} md={6} lg={6}>
               <div className="dropdown">
-                <button className="btn btn-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" onClick={deleteAllLayer}>
+                <button className="btn btn-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
                 경로탐색
                 </button>
                 <ul className="dropdown-menu">
                   <li><button className="dropdown-item" onClick={()=>{setExploreOption(1)}}>최단경로탐색</button></li>
                   <li><button className="dropdown-item" onClick={()=>{setExploreOption(2)}}>최적경로탐색</button></li>
                   <li><button className="dropdown-item" onClick={()=>{setExploreOption(3)}}>왕복최적경로탐색</button></li>
-                  <li><button className="dropdown-item" onClick={()=>{setExploreOption(4)}}>최단경로탐색(경유지포함)</button></li>
                 </ul>
               </div>
-              </Col>
-              <Col xs={6} md={6} lg={6}>
-                <button type="submit" className="btn btn-danger"  onClick={deleteAllLayer}>경로 삭제</button>
               </Col>
             </Row>
           </Container>
@@ -443,34 +366,6 @@ const SidebarMap = () => {
               </Formik>
             }
           </li>
-          : <div/>}
-          { exploreopt == 4 ? 
-            <li>
-            <h3>최단경로탐색(경유지)</h3>
-            <hr style={{width:"50%"}} />
-              {
-                <Formik initialValues={{ }}
-                enableReinitialize={true}
-                onSubmit={(value)=>{createRouteWithStopOver(value)}}>
-                  {
-                    (props)=>(
-                      <Form className="container-fluid">
-                          <Container>
-                            <Row style={{marginTop:10}}>
-                            <Col xs={6} md={6} lg={6}>
-                              <button type="submit" className="btn btn-primary">경로생성</button>
-                            </Col>
-                            </Row>
-                            <hr style={{width:"90%"}} />
-                            { showguide1 ? <><div>맵 상단에 이동할 구간을 클릭하세요.</div><hr style={{width:"90%"}} /></> : <div></div> }
-                            { showguide2 ? <><div>경로 생성에 문제가 발생했습니다.</div> <hr style={{width:"90%"}} /></> : <div></div> }
-                          </Container>
-                        </Form>
-                    )
-                  }
-                </Formik>
-              }
-            </li>
           : <div/>}
         </ul>
       </aside>
