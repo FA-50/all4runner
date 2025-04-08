@@ -11,9 +11,10 @@ import {useMapContext} from '../Context/MapContext'
 import { GeoJSON } from 'ol/format';
 import  VectorSource from 'ol/source/Vector';
 import  VectorLayer from 'ol/layer/Vector'
-import { Style, Stroke , Circle as CircleStyle , Fill} from 'ol/style'
+import { Style, Stroke , Circle as CircleStyle , Fill , Icon} from 'ol/style'
 import { Point } from 'ol/geom'
 import {Feature} from 'ol'
+import { create } from 'ol/transform';
 
 
 
@@ -30,6 +31,8 @@ const SidebarMap = () => {
   // 경로 생성 에러 안내문 표시 여부
   const [ showguide2, setShowGuide2 ] = useState(false)
   mapdispatch({type:"getmap"})
+  // 로딩 표시 여부
+  const [ loading , setLoading ] = useState(false)
 
 
   // Map상의 모든 Layer 삭제하는 함수
@@ -45,19 +48,31 @@ const SidebarMap = () => {
   }
 
   // Map상에 경로 생성을 위해 클릭 시 포인트 생성하는 함수
-  const createPoint=(coord)=>{
+  const createPoint=(coord,opt)=>{
     var xcoord = coord[0]
     var ycoord = coord[1]
     const pointfeature = new Feature({
       geometry : new Point([xcoord,ycoord]),
-      style : new Style({
-        image: new CircleStyle({
-          radius: 6,
-          fill: new Fill({ color: 'red' }),  // 내부 색상
-          stroke: new Stroke({ color: 'white', width: 2 }), // 테두리
-        }),
-      })
     })
+    var featurestyle;
+    if (opt==0){
+        featurestyle = new Style({
+          image : new CircleStyle({
+            radius: 6,
+            fill: new Fill({ color: 'red' }),  // 내부 색상
+            stroke: new Stroke({ color: 'white', width: 2 }), // 테두리
+          }),
+        })
+    }else{
+      featurestyle = new Style({
+          image: new Icon({
+            anchor: [0.2, 1.1],
+            src: '/img/flag.png', // 아이콘 이미지 URL
+            scale: 0.1,
+          })
+        })
+      }
+    pointfeature.setStyle(featurestyle)
     var pointvectorsource = new VectorSource({
       features:[pointfeature]
     })
@@ -108,17 +123,15 @@ const SidebarMap = () => {
     return featurearr;
   }
 
-
-
-
   // 경로 한개 선택 시 json 배열을 입력받아서 경로생성
-  const AddingJSONLayerToMap = ( jsonarr )=>{
+  const AddingJSONLayerToMap = ( jsonarr , firstlastpoints )=>{
     if (jsonarr.length==0){
       setShowGuide2(true)
+      deleteAllLayer()
+      setLoading(false)
     }else{
-      var maplayerlength = mapstate.getLayers().array_.length 
-      if (maplayerlength > 2)
-      {
+      var maplayerlength = mapstate.getLayers().array_.length;
+      if ( maplayerlength >2){
         deleteAllLayer()
       }
       // 각 행의 json 데이터를 각각의 feature 데이터로 생성하여 
@@ -137,10 +150,13 @@ const SidebarMap = () => {
       // Vector Layer 생성 시 Vector Source의 geom 범위로 Viewport의 확대를 수행
       mapstate.getView().fit(jsonvectorsource1.getExtent(),{duration:500})
       console.log(`총 거리 : ${jsonarr[jsonarr.length-1].totdistance}`)
+      createPoint(firstlastpoints[0],1)
+      createPoint(firstlastpoints[1],1)
+      mapstate.render()
+      // 로딩창종료
+      setLoading(false)
     }
   }
-
-
 
   // 마우스 클릭으로 최단경로를 생성하는 콜백함수
   const createRoutebyMouse = ({distanceshort,checkboxshortexclude})=>{
@@ -150,7 +166,7 @@ const SidebarMap = () => {
     setShowGuide2(false)
     var excludeoption; 
     // 횡단보도, 육교 제외여부
-    if (checkboxshortexclude==undefined){
+    if (checkboxshortexclude==undefined | checkboxshortexclude==[]){
       // 횡단보도, 육교 전부 포함시 1
       excludeoption = 1
     }else if(checkboxshortexclude.length==1 && checkboxshortexclude[0]=="crosswalk"){
@@ -164,19 +180,22 @@ const SidebarMap = () => {
       excludeoption = 4
     }
 
+
     // 초기 설정
     var coordarr = []
     var iter=0
     var clickend = false
+    
+    var firstlastpoints;
 
     // 클릭이벤트로로 얻는 좌표를 배열로 넣는 콜백함수
     const addcoord = (evt) => {
       // 좌표 획득 후 배열에 입력 및 포인트 생성
       var clickedcoord = evt.coordinate;
       coordarr[iter]=clickedcoord
-      // 해당 좌표로 포인트를 생성하는 함수
-      createPoint(coordarr[iter++])
 
+      // 해당 좌표로 포인팅 용도로 포인트를 생성하는 함수
+      createPoint(coordarr[iter++],0)
 
       // 더블 클릭 후 dblclick 이벤트 작동 시 작용
       if (clickend){
@@ -187,6 +206,10 @@ const SidebarMap = () => {
 
         // 포인트 총 갯수
         var totalpointcount = coordarr.length;
+        
+        // 시작점 끝점 아이콘 지정용
+        firstlastpoints = [coordarr[0],coordarr[totalpointcount-1]]
+
         var xcoord = ""
         var ycoord = ""
         // , 로 구분되는 위도 , 경도 좌표의 문자열을 생성.
@@ -208,15 +231,20 @@ const SidebarMap = () => {
           distance : distanceshort,
           excludeoption : excludeoption
         }
-        // 경로 생성을 위한한 API 호출 
+        setLoading(true)
+        excludeoption=0
+
+        // 경로 생성을 위한 API 호출 
         retrieveRouteApiStopOver(coorddistanceobject)
         .then((result)=>{
-          AddingJSONLayerToMap(result.data)
+          AddingJSONLayerToMap(result.data,firstlastpoints)
+          // 로딩창 표시
         })
         .catch((error)=>{
           // 오류발생시 안내문 표시
           console.log(error)
           setShowGuide2(true)
+          setLoading(false)
           deleteAllLayer()
         })
         .finally(console.log("실행끝"))
@@ -378,6 +406,13 @@ const SidebarMap = () => {
             }
           </li>
           : <div/>}
+          <li>
+            { loading ?
+              <div className="spinner-border" role="status">
+                <span className="visually-hidden">Loading...</span>
+              </div> : <div/>
+            }
+          </li>
         </ul>
       </aside>
     </>
