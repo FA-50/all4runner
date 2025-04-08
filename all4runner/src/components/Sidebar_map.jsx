@@ -75,23 +75,34 @@ const SidebarMap = () => {
     var i=0
     jsonarr.map((json)=>{
       var geojsonfeature = new GeoJSON().readFeature(json.geojson,{featureProjection: 'EPSG:4326'})
+
+      var innerlinestyle;
+            // 외곽선 스타일
+      var outerlinestyle = new Style({
+              stroke: new Stroke({
+                color: 'black',      // 실제 라인 색상
+                width: 9,           // 라인 두께
+              }),
+            });
       // 보행로 종류 별 색상 배정
       // 해당 link가 횡단보도 인 경우 붉은색
       if(json.crosswalk==1){ 
-        geojsonfeature.setStyle(new Style({ stroke : new Stroke({color :'#ff0000',width : 5})}))
+        innerlinestyle = new Style({ stroke : new Stroke({color :'#ff0000',width : 6})})
       }else if(json.footbridge == 1 | json.bridge == 1){
         // 다리, 육교인 경우 오렌지색
-        geojsonfeature.setStyle(new Style({ stroke : new Stroke({color :'#FFA500',width : 5})}))
+        innerlinestyle = new Style({ stroke : new Stroke({color :'#FFA500',width : 6})})
       }else if(json.park==1){
         // 공원, 녹지 길인 경우 녹색
-        geojsonfeature.setStyle(new Style({ stroke : new Stroke({color :'#32CD32',width : 5})}))
+        innerlinestyle = new Style({ stroke : new Stroke({color :'#32CD32',width : 6})})
       }else if(json.subwaynetw==1 | json.tunnel==1){
-        // 터널, 지하철네트워크인 경우 회색 
-        geojsonfeature.setStyle(new Style({ stroke : new Stroke({color :'#708090',width : 5})}))
+        // 터널, 지하철네트워크인 경우 갈갈색 
+        innerlinestyle = new Style({ stroke : new Stroke({color :'#D2691E',width : 6})})
       }else{
-        // 모두 해당하지 않는 경우 갈색
-        geojsonfeature.setStyle(new Style({ stroke : new Stroke({color :'#D2691E',width : 5})}))
+        // 모두 해당하지 않는 경우 회색
+        innerlinestyle = new Style({ stroke : new Stroke({color :'#708090',width : 6})})
+        outerlinestyle = new Style({})
       };
+      geojsonfeature.setStyle([outerlinestyle,innerlinestyle])
       featurearr[i++]= geojsonfeature
     })
     return featurearr;
