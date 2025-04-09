@@ -1,11 +1,11 @@
-import React, {useEffect, useState} from 'react'
+import React, { useState} from 'react'
 import logo from '../img/all4runner_1.svg'
 import { FaTimes } from 'react-icons/fa'
 import { useGlobalContext } from '../Context/SidebarContext'
 import { FaHome } from 'react-icons/fa';
 import { Container, Row , Col } from 'react-bootstrap'
 import {Formik , Field , Form } from "formik"
-import {retrieveRouteApi,retrieveRouteApiStopOver} from '../axios/ApiOpenlayers'
+import {retrieveRouteApiStopOver} from '../axios/ApiOpenlayers'
 import {useMapContext} from '../Context/MapContext'
 
 import { GeoJSON } from 'ol/format';
@@ -14,7 +14,6 @@ import  VectorLayer from 'ol/layer/Vector'
 import { Style, Stroke , Circle as CircleStyle , Fill , Icon} from 'ol/style'
 import { Point, LineString } from 'ol/geom'
 import {Feature} from 'ol'
-import { create } from 'ol/transform';
 import { Draw } from 'ol/interaction'
 
 import { getLength } from 'ol/sphere';
@@ -182,10 +181,10 @@ const SidebarMap = () => {
 
 
   // 마우스 클릭으로 최단경로를 생성하는 콜백함수
-  const createRoutebyMouse = ({checkboxshortexclude})=>{
+  const createRoutebyMouse = ({checkbox,checkboxdistance})=>{
 
     // 거리제한 없음
-    var distanceshort = 99999999999;
+    var distanceshort ;
 
     // draw 기능 작동
     var drawsource = drawing()
@@ -212,32 +211,47 @@ const SidebarMap = () => {
         // 거리 설정
         // getLength : ol / sphere
         var initdistance = getLength(geom3857); // 단위: 미터
+
+        // 거리제한 설정 여부
+        if (checkboxdistance.length==0){
+          // 체크박스 체크 안하면 거리제한 없음
+          distanceshort= 99999999999;
+        }else{
+          // 체크 시 draw 거리를 한정해서 거리제한.
+          distanceshort=initdistance;
+        }
+
+        // 거리표현
         setDrawdistance(Math.round(initdistance));
       })
     })
 
+    
     // 경로생성 버튼 숨김
     setActive(true)
-
     // 점 클릭 메시지 지시
     setShowGuide1(true)
      // 오류 발생 메시지 표시 x
     setShowGuide2(false)
+
+
     var excludeoption; 
     // 횡단보도, 육교 제외여부
-    if (checkboxshortexclude==undefined | checkboxshortexclude==[]){
+    if (checkbox.length==0){
       // 횡단보도, 육교 전부 포함시 1
       excludeoption = 1
-    }else if(checkboxshortexclude.length==1 && checkboxshortexclude[0]=="crosswalk"){
+    }else if(checkbox.length==1 && checkbox[0]=="crosswalk"){
       // 횡단보도 제외 시 2
       excludeoption = 2
-    }else if(checkboxshortexclude.length==1 && checkboxshortexclude[0]=="bridge"){
+    }else if(checkbox.length==1 && checkbox[0]=="bridge"){
       // 육교 제외 시 3
       excludeoption = 3
     }else{
       // 횡단보도, 육교 제외 시 4
       excludeoption = 4
     }
+
+    
 
 
     // 초기 설정
@@ -321,7 +335,7 @@ const SidebarMap = () => {
     // 선 생성 이벤트 실행
     mapstate.on('click',addcoord)
     // 더블클릭 이벤트 : 경로 생성 끝
-    mapstate.on('dblclick',()=>{console.log("중단");clickend=true})
+    mapstate.on('dblclick',()=>{clickend=true})
   }
 
   
@@ -356,7 +370,6 @@ const SidebarMap = () => {
                 <ul className="dropdown-menu">
                   <li><button className="dropdown-item" onClick={()=>{setExploreOption(1)}}>최단경로탐색</button></li>
                   <li><button className="dropdown-item" onClick={()=>{setExploreOption(2)}}>최적경로탐색</button></li>
-                  <li><button className="dropdown-item" onClick={()=>{setExploreOption(3)}}>왕복최적경로탐색</button></li>
                 </ul>
               </div>
               </Col>
@@ -369,7 +382,7 @@ const SidebarMap = () => {
             <h3>최단경로탐색</h3>
             <hr style={{width:"50%"}} />
               {
-                <Formik initialValues={{ }}
+                <Formik initialValues={{ checkbox :  [],checkboxdistance:[]}}
                 enableReinitialize={true}
                 onSubmit={(value)=>{createRoutebyMouse(value)}}>
                   {
@@ -379,24 +392,31 @@ const SidebarMap = () => {
                             <Row>
                               <fieldset className="form-group">
                                 <div className="form-check form-check-inline">
-                                  <Field className="form-check-input" type="checkbox" value={"crosswalk"} name="checkboxshortexclude" id="checkboxshortexcludecrosswalkid" />
+                                  <Field className="form-check-input" type="checkbox" value={"crosswalk"} name="checkbox" id="checkboxshortexcludecrosswalkid" />
                                   <label className="form-check-label" htmlFor="checkboxshortexcludecrosswalkid">횡단보도제외</label>
                                 </div>
                                 <div className="form-check form-check-inline">
-                                  <Field className="form-check-input" type="checkbox" value={"bridge"} name="checkboxshortexclude" id="checkboxshortexcludefootbridgeid"/>
+                                  <Field className="form-check-input" type="checkbox" value={"bridge"} name="checkbox" id="checkboxshortexcludefootbridgeid"/>
                                   <label className="form-check-label" htmlFor="checkboxshortexcludefootbridgeid">육교제외</label>
                                 </div>
                               </fieldset>
                             </Row>
                             <Row style={{marginTop:10}}>
                             <hr style={{width:"90%"}} />
+                              <fieldset className="form-group">
+                                <div className="form-check form-check-inline">
+                                      <Field className="form-check-input" type="checkbox" value={"distancelimitactive"} name="checkboxdistance" id="distancelimitid"/>
+                                      <label className="form-check-label" htmlFor="distancelimitid">거리제한 시 체크</label>
+                                </div>
+                                <hr style={{width:"90%"}} />
+                              </fieldset>
                               <Col xs={12} md={12} lg={12}>
                                 { active ? 
-                                <div class="alert alert-light" role="alert" style={{width:"90%"}}>
+                                <div className="alert alert-light" role="alert" style={{width:"90%",marginTop:10}}>
                                 최소거리 : {drawdistance} m
                                 </div>
                                 :
-                                <button type="submit" className="btn btn-primary" style={{marginTop:30}}>경로생성</button> 
+                                <button type="submit" className="btn btn-primary" style={{marginTop:10}}>경로생성</button> 
                                 }
                               </Col>
                             </Row>
