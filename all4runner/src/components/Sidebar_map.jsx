@@ -12,10 +12,13 @@ import { GeoJSON } from 'ol/format';
 import  VectorSource from 'ol/source/Vector';
 import  VectorLayer from 'ol/layer/Vector'
 import { Style, Stroke , Circle as CircleStyle , Fill , Icon} from 'ol/style'
-import { Point } from 'ol/geom'
+import { Point, LineString } from 'ol/geom'
 import {Feature} from 'ol'
 import { create } from 'ol/transform';
+import { Draw } from 'ol/interaction'
 
+import { getLength } from 'ol/sphere';
+import { transform  } from 'ol/proj'
 
 
 const SidebarMap = () => {
@@ -33,9 +36,13 @@ const SidebarMap = () => {
   mapdispatch({type:"getmap"})
   // 로딩 표시 여부
   const [ loading , setLoading ] = useState(false)
+  // 경로생성 버튼 누를 경우 작동상태 표시여부
+  const [ active , setActive ] = useState(false)
+  // Draw 거리 정보
+  const [ drawdistance , setDrawdistance ] = useState(0)
 
 
-  // Map상의 모든 Layer 삭제하는 함수
+  // Map상의 Tile Map을 제외한 모든 Layer 삭제하는 함수
   const deleteAllLayer = () =>{
     // 현재 map객체에 포함된 layer 갯수 가져오기
     var maplayerlength = mapstate.getLayers().array_.length 
@@ -68,7 +75,7 @@ const SidebarMap = () => {
           image: new Icon({
             anchor: [0.2, 1.1],
             src: '/img/flag.png', // 아이콘 이미지 URL
-            scale: 0.1,
+            scale: 0.05,
           })
         })
       }
@@ -83,6 +90,19 @@ const SidebarMap = () => {
     mapstate.addLayer(pointvectorlayer)
     mapstate.render()
   }
+
+  // draw 기능에 필요한 draw vector source를 제공하는 함수
+  const drawing = ()=>{
+    // drawing vector의 초기 배열 정의
+    const drawSource = new VectorSource({})
+    const drawLayer = new VectorLayer({
+      source:drawSource,
+      zIndex:102
+    })
+    mapstate.addLayer(drawLayer)
+    return drawSource
+  }
+
 
   // 각 행의 json 데이터를 각각의 feature 데이터로 생성하여 Feature 배열로 반환하는 함수
   const MakeFeatureFromJSON = (jsonarr) =>{
@@ -129,6 +149,7 @@ const SidebarMap = () => {
       setShowGuide2(true)
       deleteAllLayer()
       setLoading(false)
+      setActive(false)
     }else{
       var maplayerlength = mapstate.getLayers().array_.length;
       if ( maplayerlength >2){
@@ -155,11 +176,49 @@ const SidebarMap = () => {
       mapstate.render()
       // 로딩창종료
       setLoading(false)
+      setActive(false)
     }
   }
 
+
   // 마우스 클릭으로 최단경로를 생성하는 콜백함수
-  const createRoutebyMouse = ({distanceshort,checkboxshortexclude})=>{
+  const createRoutebyMouse = ({checkboxshortexclude})=>{
+
+    // 거리제한 없음
+    var distanceshort = 99999999999;
+
+    // draw 기능 작동
+    var drawsource = drawing()
+    var draw = new Draw({
+      source:drawsource,
+      type : 'LineString',
+      minPoints : 2
+    })
+    mapstate.addInteraction(draw)
+
+    // draw 거리정보 제공
+    draw.on('drawstart', (evt)=>{
+      evt.feature.getGeometry().on('change',(geomEvt)=>{
+        var coords = geomEvt.target.getCoordinates();
+        if (coords.length < 2) {
+          setDrawdistance(0);
+          return;
+        }
+
+        // EPSG:4326 → EPSG:3857로 변환
+        var coords3857 = coords.map((c) => transform(c, 'EPSG:4326', 'EPSG:3857'));
+        var geom3857 = new LineString(coords3857);
+
+        // 거리 설정
+        // getLength : ol / sphere
+        var initdistance = getLength(geom3857); // 단위: 미터
+        setDrawdistance(Math.round(initdistance));
+      })
+    })
+
+    // 경로생성 버튼 숨김
+    setActive(true)
+
     // 점 클릭 메시지 지시
     setShowGuide1(true)
      // 오류 발생 메시지 표시 x
@@ -188,21 +247,29 @@ const SidebarMap = () => {
     
     var firstlastpoints;
 
+    
+
     // 클릭이벤트로로 얻는 좌표를 배열로 넣는 콜백함수
     const addcoord = (evt) => {
-      // 좌표 획득 후 배열에 입력 및 포인트 생성
-      var clickedcoord = evt.coordinate;
-      coordarr[iter]=clickedcoord
 
-      // 해당 좌표로 포인팅 용도로 포인트를 생성하는 함수
-      createPoint(coordarr[iter++],0)
+      // 더블클릭이 수행될때까지 작동
+      if (clickend==false){
+        // 좌표 획득 후 배열에 입력 및 포인트 생성
+        var clickedcoord = evt.coordinate;
+        coordarr[iter]=clickedcoord
 
-      // 더블 클릭 후 dblclick 이벤트 작동 시 작용
-      if (clickend){
+        // 해당 좌표로 포인팅 용도로 포인트를 생성하는 함수
+        createPoint(coordarr[iter++],0)
+      }
+      else{ // 더블 클릭 후 dblclick 이벤트 작동 시 작용
+
         // 이벤트 해제
         mapstate.un('click',addcoord)
         // 안내문 해제
         setShowGuide1(false)
+        // Draw 기능 종료
+        mapstate.removeInteraction(draw)
+
 
         // 포인트 총 갯수
         var totalpointcount = coordarr.length;
@@ -245,6 +312,7 @@ const SidebarMap = () => {
           console.log(error)
           setShowGuide2(true)
           setLoading(false)
+          setActive(false)
           deleteAllLayer()
         })
         .finally(console.log("실행끝"))
@@ -252,10 +320,11 @@ const SidebarMap = () => {
     }
     // 선 생성 이벤트 실행
     mapstate.on('click',addcoord)
-    // 더블클릭 이벤트 : 포인트 생성 끝
-    mapstate.on('dblclick',()=>{clickend=true})
+    // 더블클릭 이벤트 : 경로 생성 끝
+    mapstate.on('dblclick',()=>{console.log("중단");clickend=true})
   }
 
+  
 
   return (
     <>
@@ -321,15 +390,15 @@ const SidebarMap = () => {
                             </Row>
                             <Row style={{marginTop:10}}>
                             <hr style={{width:"90%"}} />
-                            <Col xs={6} md={6} lg={6}>
-                              <fieldset className="from-group">
-                                <label htmlFor="distanceshortid" className="form-label">최대거리설정</label>
-                                <Field required = "required" type="text" className="form-control" name="distanceshort" id="distanceshortid" placeholder='거리'/>
-                              </fieldset>
-                            </Col>
-                            <Col xs={6} md={6} lg={6}>
-                              <button type="submit" className="btn btn-primary" style={{marginTop:30}}>경로생성</button>
-                            </Col>
+                              <Col xs={12} md={12} lg={12}>
+                                { active ? 
+                                <div class="alert alert-light" role="alert" style={{width:"90%"}}>
+                                최소거리 : {drawdistance} m
+                                </div>
+                                :
+                                <button type="submit" className="btn btn-primary" style={{marginTop:30}}>경로생성</button> 
+                                }
+                              </Col>
                             </Row>
                             <hr style={{width:"90%"}} />
                             { showguide1 ? <div>맵 상단에 이동할 구간을 클릭하세요.</div> : <div></div> }
@@ -408,7 +477,7 @@ const SidebarMap = () => {
           : <div/>}
           <li>
             { loading ?
-              <div className="spinner-border" role="status">
+              <div className="spinner-border" role="status" style={{marginLeft:30}}>
                 <span className="visually-hidden">Loading...</span>
               </div> : <div/>
             }

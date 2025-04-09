@@ -18,14 +18,6 @@ const MapComponent = ({children})=>{
     switch(action.type){
       case "getmap":
         return map
-        // graticule 설정
-      case "setgraticule":
-        new Graticule({
-          map:map,
-          showLabels:true,
-          zIndex:4
-        });
-        break;
       case "settoilet":
         const toiletsource = new VectorSource({
           format:new GeoJSON(),
@@ -90,8 +82,6 @@ const MapComponent = ({children})=>{
       }),
     })
     setMap(Mapinstance)
-    // graticule 설정하도록 설정.
-    mapdispatch({type:"setgraticule"})
     //mapdispatch({type:"settoilet"})
     // useReducer를 통해 동대문구 border 설정
     mapdispatch({type:"setborder"})
