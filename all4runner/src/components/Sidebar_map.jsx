@@ -5,7 +5,7 @@ import { useGlobalContext } from '../Context/SidebarContext'
 import { FaHome } from 'react-icons/fa';
 import { Container, Row , Col } from 'react-bootstrap'
 import {Formik , Field , Form } from "formik"
-import {retrieveRouteApiStopOver} from '../axios/ApiOpenlayers'
+import {retrieveRouteApiStopOver,retrieveOptimalRouteApiStopOver} from '../axios/ApiOpenlayers'
 import {useMapContext} from '../Context/MapContext'
 
 import { GeoJSON } from 'ol/format';
@@ -121,19 +121,19 @@ const SidebarMap = () => {
       // 보행로 종류 별 색상 배정
       // 해당 link가 횡단보도 인 경우 붉은색
       if(json.crosswalk==1){ 
-        innerlinestyle = new Style({ stroke : new Stroke({color :'#ff0000',width : 6})})
+        innerlinestyle = new Style({ stroke : new Stroke({color :'#ff0000',width : 6}),zIndex:10})
       }else if(json.footbridge == 1 | json.bridge == 1){
         // 다리, 육교인 경우 오렌지색
-        innerlinestyle = new Style({ stroke : new Stroke({color :'#FFA500',width : 6})})
+        innerlinestyle = new Style({ stroke : new Stroke({color :'#FFA500',width : 6}),zIndex:10})
       }else if(json.park==1){
         // 공원, 녹지 길인 경우 녹색
-        innerlinestyle = new Style({ stroke : new Stroke({color :'#32CD32',width : 6})})
+        innerlinestyle = new Style({ stroke : new Stroke({color :'#32CD32',width : 6}),zIndex:10})
       }else if(json.subwaynetw==1 | json.tunnel==1){
-        // 터널, 지하철네트워크인 경우 갈갈색 
-        innerlinestyle = new Style({ stroke : new Stroke({color :'#D2691E',width : 6})})
+        // 터널, 지하철네트워크인 경우 갈색 
+        innerlinestyle = new Style({ stroke : new Stroke({color :'#D2691E',width : 6}),zIndex:10})
       }else{
         // 모두 해당하지 않는 경우 회색
-        innerlinestyle = new Style({ stroke : new Stroke({color :'#708090',width : 6})})
+        innerlinestyle = new Style({ stroke : new Stroke({color :'#708090',width : 6}),zIndex:9})
         outerlinestyle = new Style({})
       };
       geojsonfeature.setStyle([outerlinestyle,innerlinestyle])
@@ -338,6 +338,165 @@ const SidebarMap = () => {
     mapstate.on('dblclick',()=>{clickend=true})
   }
 
+
+
+   // 마우스 클릭으로 최단경로를 생성하는 콜백함수
+  const createOptimalRoutebyMouse = ({weightcrosswalk,weightdrink,weightslope,weighttoilet,checkboxoptimalexclude,checkboxdistance})=>{
+
+    // 거리제한 없음
+    var distanceshort ;
+
+    // draw 기능 작동
+    var drawsource = drawing()
+    var draw = new Draw({
+      source:drawsource,
+      type : 'LineString',
+      minPoints : 2
+    })
+    mapstate.addInteraction(draw)
+
+    // draw 거리정보 제공
+    draw.on('drawstart', (evt)=>{
+      evt.feature.getGeometry().on('change',(geomEvt)=>{
+        var coords = geomEvt.target.getCoordinates();
+        if (coords.length < 2) {
+          setDrawdistance(0);
+          return;
+        }
+
+        // EPSG:4326 → EPSG:3857로 변환
+        var coords3857 = coords.map((c) => transform(c, 'EPSG:4326', 'EPSG:3857'));
+        var geom3857 = new LineString(coords3857);
+
+        // 거리 설정
+        // getLength : ol / sphere
+        var initdistance = getLength(geom3857); // 단위: 미터
+
+        // 거리제한 설정 여부
+        if (checkboxdistance.length==0){
+          // 체크박스 체크 안하면 거리제한 없음
+          distanceshort= 99999999999;
+        }else{
+          // 체크 시 draw 거리를 한정해서 거리제한.
+          distanceshort=initdistance;
+        }
+
+        // 거리표현
+        setDrawdistance(Math.round(initdistance));
+      })
+    })
+
+    
+    // 경로생성 버튼 숨김
+    setActive(true)
+    // 점 클릭 메시지 지시
+    setShowGuide1(true)
+     // 오류 발생 메시지 표시 x
+    setShowGuide2(false)
+
+
+    var excludeoption; 
+    // 횡단보도, 육교 제외여부
+    if (checkboxoptimalexclude.length==0){
+      // 횡단보도, 육교 전부 포함시 1
+      excludeoption = 1
+    }else if(checkboxoptimalexclude.length==1 && checkboxoptimalexclude[0]=="crosswalk"){
+      // 횡단보도 제외 시 2
+      excludeoption = 2
+    }else if(checkboxoptimalexclude.length==1 && checkboxoptimalexclude[0]=="bridge"){
+      // 육교 제외 시 3
+      excludeoption = 3
+    }else{
+      // 횡단보도, 육교 제외 시 4
+      excludeoption = 4
+    }
+
+    
+
+
+    // 초기 설정
+    var coordarr = []
+    var iter=0
+    var clickend = false
+    
+    var firstlastpoints;
+
+    
+
+    // 클릭이벤트로로 얻는 좌표를 배열로 넣는 콜백함수
+    const addcoord = (evt) => {
+
+      // 더블클릭이 수행될때까지 작동
+      if (clickend==false){
+        // 좌표 획득 후 배열에 입력 및 포인트 생성
+        var clickedcoord = evt.coordinate;
+        coordarr[iter]=clickedcoord
+
+        // 해당 좌표로 포인팅 용도로 포인트를 생성하는 함수
+        createPoint(coordarr[iter++],0)
+      }
+      else{ // 더블 클릭 후 dblclick 이벤트 작동 시 작용
+
+        // 이벤트 해제
+        mapstate.un('click',addcoord)
+        // 안내문 해제
+        setShowGuide1(false)
+        // Draw 기능 종료
+        mapstate.removeInteraction(draw)
+
+
+        // 포인트 총 갯수
+        var totalpointcount = coordarr.length;
+        
+        // 시작점 끝점 아이콘 지정용
+        firstlastpoints = [coordarr[0],coordarr[totalpointcount-1]]
+
+        var xcoord = ""
+        var ycoord = ""
+        // , 로 구분되는 위도 , 경도 좌표의 문자열을 생성.
+        for( var i=0;i<totalpointcount;i++){
+          if (i==totalpointcount-1){
+            xcoord += coordarr[i][0].toString()
+            ycoord += coordarr[i][1].toString()
+          }else{
+            xcoord = xcoord + coordarr[i][0].toString() + ","
+            ycoord += coordarr[i][1].toString() + ","
+          }
+        }
+        
+        // Spring에서 @RequestBody로 받을 Object 객체 정의하기.
+        const coorddistanceobject = {
+          xcoord : xcoord,
+          ycoord : ycoord,
+          totpointcount : totalpointcount,
+          distance : distanceshort,
+          excludeoption : excludeoption
+        }
+        setLoading(true)
+        excludeoption=0
+
+        // 경로 생성을 위한 API 호출 
+        retrieveOptimalRouteApiStopOver(coorddistanceobject)
+        .then((result)=>{
+          AddingJSONLayerToMap(result.data,firstlastpoints)
+          // 로딩창 표시
+        })
+        .catch((error)=>{
+          // 오류발생시 안내문 표시
+          console.log(error)
+          setShowGuide2(true)
+          setLoading(false)
+          setActive(false)
+          deleteAllLayer()
+        })
+        .finally(console.log("실행끝"))
+      }
+    }
+    // 선 생성 이벤트 실행
+    mapstate.on('click',addcoord)
+    // 더블클릭 이벤트 : 경로 생성 끝
+    mapstate.on('dblclick',()=>{clickend=true})
+  }
   
 
   return (
@@ -436,9 +595,9 @@ const SidebarMap = () => {
           <h3>최적경로탐색</h3>
           <hr style={{width:"50%"}} />
             {
-              <Formik initialValues={{weightslope:5.5, weighttoilet:5, weightdrink:5, weightcrosswalk:5 }}
+              <Formik initialValues={{weightslope:5.5, weighttoilet:5, weightdrink:5, weightcrosswalk:5 , checkboxdistance:[], checkboxoptimalexclude:[]}}
               enableReinitialize={true}
-              onSubmit={(value)=>{console.log(value);createRoutebyMouse(value)}}>
+              onSubmit={(value)=>{console.log(value);createOptimalRoutebyMouse(value)}}>
                 {
                   (props)=>(
                     <Form className="container-fluid">
@@ -475,18 +634,25 @@ const SidebarMap = () => {
                             </fieldset>
                           </Row>
                           <Row style={{marginTop:10}}>
-                          <hr style={{width:"90%"}} />
-                          <Col xs={6} md={6} lg={6}>
-                            <fieldset className="from-group">
-                              <label htmlFor="distanceoptimalid" className="form-label">최대거리설정</label>
-                              <Field required = "required" type="text" className="form-control" name="distanceoptimal" id="distanceoptimalid" placeholder='거리'/>
-                            </fieldset>
-                          </Col>
-                          <Col xs={6} md={6} lg={6}>
-                            <button type="submit" className="btn btn-primary" style={{marginTop:30}}>경로생성</button>
-                          </Col>
-                          </Row>
-                          <hr style={{width:"90%"}} />
+                            <hr style={{width:"90%"}} />
+                              <fieldset className="form-group">
+                                <div className="form-check form-check-inline">
+                                      <Field className="form-check-input" type="checkbox" value={"distancelimitactive"} name="checkboxdistance" id="distancelimitid"/>
+                                      <label className="form-check-label" htmlFor="distancelimitid">거리제한 시 체크</label>
+                                </div>
+                                <hr style={{width:"90%"}} />
+                              </fieldset>
+                              <Col xs={12} md={12} lg={12}>
+                                { active ? 
+                                <div className="alert alert-light" role="alert" style={{width:"90%",marginTop:10}}>
+                                최소거리 : {drawdistance} m
+                                </div>
+                                :
+                                <button type="submit" className="btn btn-primary" style={{marginTop:10}}>경로생성</button> 
+                                }
+                              </Col>
+                            </Row>
+                            <hr style={{width:"90%"}} />
                         </Container>
                       </Form>
                   )
