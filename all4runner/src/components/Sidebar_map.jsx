@@ -146,7 +146,6 @@ const SidebarMap = () => {
         // 이전 link가 동일한 종류인 경우 count하지 않는다.
         if(prelinktype[i-1]!="횡단보도"){ 
           crosswalkcnt++ 
-          console.log(prelinktype[i-1])
         }
 
       }else if(footbridge == 1 | bridge == 1){
@@ -155,14 +154,12 @@ const SidebarMap = () => {
         prelinktype[i]="육교"
         if(prelinktype[i-1]!="육교"){ 
           bridgecnt++ 
-          console.log(prelinktype[i-1])
       }else if(park==1){
         // 공원, 녹지 길인 경우 녹색
         innerlinestyle = new Style({ stroke : new Stroke({color :'#32CD32',width : 6}),zIndex:13})
         prelinktype[i]="공원"
         if(prelinktype[i-1]!="공원"){ 
           parkcnt++ 
-          console.log(prelinktype[i-1])
         }}
       }else if(subwaynetw==1 | tunnel==1){
         // 터널, 지하철네트워크인 경우 갈색 
@@ -170,7 +167,6 @@ const SidebarMap = () => {
         prelinktype[i]="터널"
         if(prelinktype[i-1]=="터널"){ 
           tunnelcnt++ 
-          console.log(prelinktype[i-1])
         } 
       }else{
         // 모두 해당하지 않는 경우 회색
