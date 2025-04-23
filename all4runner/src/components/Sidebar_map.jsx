@@ -32,14 +32,16 @@ const SidebarMap = () => {
   const [ showguide1,setShowGuide1 ] = useState(false)
   // 경로 생성 에러 안내문 표시 여부
   const [ showguide2, setShowGuide2 ] = useState(false)
-  mapdispatch({type:"getmap"})
   // 로딩 표시 여부
   const [ loading , setLoading ] = useState(false)
   // 경로생성 버튼 누를 경우 작동상태 표시여부
   const [ active , setActive ] = useState(false)
   // Draw 거리 정보
   const [ drawdistance , setDrawdistance ] = useState(0)
-
+  
+  
+  // Map 초기화
+  mapdispatch({type:"getmap"})
 
   // Map상의 Tile Map을 제외한 모든 Layer 삭제하는 함수
   const deleteAllLayer = () =>{
@@ -107,8 +109,26 @@ const SidebarMap = () => {
   const MakeFeatureFromJSON = (jsonarr) =>{
     var featurearr=[]
     var i=0
+
+    var bridgecnt=0;
+    var crosswalkcnt=0;
+    var parkcnt=0;
+    var tunnelcnt=0;
+    var prelinktype=["일반"];
+
     jsonarr.map((json)=>{
-      var geojsonfeature = new GeoJSON().readFeature(json.geojson,{featureProjection: 'EPSG:4326'})
+      if (i==0){
+        prelinktype[i]="일반"
+      }
+      var crosswalk = json.crosswalk;
+      var footbridge = json.footbridge;
+      var bridge = json.bridge;
+      var park = json.park;
+      var subwaynetw = json.subwaynetw;
+      var tunnel = json.tunnel;
+      var geojson = json.geojson;
+      
+      var geojsonfeature = new GeoJSON().readFeature(geojson,{featureProjection: 'EPSG:4326'})
 
       var innerlinestyle;
             // 외곽선 스타일
@@ -120,26 +140,49 @@ const SidebarMap = () => {
             });
       // 보행로 종류 별 색상 배정
       // 해당 link가 횡단보도 인 경우 붉은색
-      if(json.crosswalk==1){ 
-        innerlinestyle = new Style({ stroke : new Stroke({color :'#ff0000',width : 6}),zIndex:10})
-      }else if(json.footbridge == 1 | json.bridge == 1){
+      if(crosswalk==1){ 
+        innerlinestyle = new Style({ stroke : new Stroke({color :'#ff0000',width : 6}),zIndex:11})
+        prelinktype[i]="횡단보도"
+        // 이전 link가 동일한 종류인 경우 count하지 않는다.
+        if(prelinktype[i-1]!="횡단보도"){ 
+          crosswalkcnt++ 
+          console.log(prelinktype[i-1])
+        }
+
+      }else if(footbridge == 1 | bridge == 1){
         // 다리, 육교인 경우 오렌지색
-        innerlinestyle = new Style({ stroke : new Stroke({color :'#FFA500',width : 6}),zIndex:10})
-      }else if(json.park==1){
+        innerlinestyle = new Style({ stroke : new Stroke({color :'#FFA500',width : 6}),zIndex:12})
+        prelinktype[i]="육교"
+        if(prelinktype[i-1]!="육교"){ 
+          bridgecnt++ 
+          console.log(prelinktype[i-1])
+      }else if(park==1){
         // 공원, 녹지 길인 경우 녹색
-        innerlinestyle = new Style({ stroke : new Stroke({color :'#32CD32',width : 6}),zIndex:10})
-      }else if(json.subwaynetw==1 | json.tunnel==1){
+        innerlinestyle = new Style({ stroke : new Stroke({color :'#32CD32',width : 6}),zIndex:13})
+        prelinktype[i]="공원"
+        if(prelinktype[i-1]!="공원"){ 
+          parkcnt++ 
+          console.log(prelinktype[i-1])
+        }}
+      }else if(subwaynetw==1 | tunnel==1){
         // 터널, 지하철네트워크인 경우 갈색 
         innerlinestyle = new Style({ stroke : new Stroke({color :'#D2691E',width : 6}),zIndex:10})
+        prelinktype[i]="터널"
+        if(prelinktype[i-1]=="터널"){ 
+          tunnelcnt++ 
+          console.log(prelinktype[i-1])
+        } 
       }else{
         // 모두 해당하지 않는 경우 회색
         innerlinestyle = new Style({ stroke : new Stroke({color :'#708090',width : 6}),zIndex:9})
         outerlinestyle = new Style({})
+        prelinktype[i]="일반"
       };
       geojsonfeature.setStyle([outerlinestyle,innerlinestyle])
+
       featurearr[i++]= geojsonfeature
     })
-    return featurearr;
+    return { countarr : [crosswalkcnt,bridgecnt,parkcnt,tunnelcnt] , featurearr: featurearr};
   }
 
   // 경로 한개 선택 시 json 배열을 입력받아서 경로생성
@@ -156,7 +199,7 @@ const SidebarMap = () => {
       }
       // 각 행의 json 데이터를 각각의 feature 데이터로 생성하여 
       // Feature 배열로 반환.
-      var featurearr = MakeFeatureFromJSON(jsonarr)
+      var {countarr , featurearr} = MakeFeatureFromJSON(jsonarr)
 
       var jsonvectorsource1 = new VectorSource({
         features : featurearr
@@ -170,6 +213,10 @@ const SidebarMap = () => {
       // Vector Layer 생성 시 Vector Source의 geom 범위로 Viewport의 확대를 수행
       mapstate.getView().fit(jsonvectorsource1.getExtent(),{duration:500})
       console.log(`총 거리 : ${jsonarr[jsonarr.length-1].totdistance}`)
+      console.log(`횡단보도 수 : ${countarr[0]}`)
+      console.log(`다리 수 : ${countarr[1]}`)
+      console.log(`공원 수 : ${countarr[2]}`)
+      console.log(`터널 수 : ${countarr[3]}`)
       createPoint(firstlastpoints[0],1)
       createPoint(firstlastpoints[1],1)
       mapstate.render()
