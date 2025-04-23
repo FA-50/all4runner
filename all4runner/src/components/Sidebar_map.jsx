@@ -545,21 +545,30 @@ const SidebarMap = () => {
   return (
     <>
       <aside className={`${isSidebarOpen? 'sidebar show-sidebar':'sidebar'}`}>
-        <div className="sidebar-header">
-        <img src={logo} width="300" height="auto" alt="error from img" />
-        <button className="close-btn" onClick={closeSidebar} >
-          < FaTimes />
-        </button>
-        </div>
         {/* 사이드바 메뉴 */}
-        <ul className="links" style={{marginTop:"-30px"}}>
+        <ul className="links" style={{marginTop:"5px"}}>
         <hr style={{width:"90%"}} />
-          <li key={1}>
-                  <a href={"/"} style={{width:"90%"}}>
-                    {<FaHome />}
-                    {"home"}
-                  </a>
-          </li>
+        <Container>
+          <Row>
+            <Col xs={9} md={9} lg={9}>
+              <li key={1}>
+                    <a href={"/"} style={{width:"100%"}}>
+                      {<FaHome />}
+                      {"home"}
+                    </a>
+              </li>
+            </Col>
+            <Col xs={3} md={3} lg={3}>
+            <div style={{display: "flex",
+  justifyContent: "spaceBetween",
+  alignItems: "center"}}>
+              <button className="close-btn" onClick={closeSidebar} >
+                < FaTimes />
+              </button>
+            </div>
+            </Col>
+          </Row>
+        </Container>
           <hr style={{width:"90%"}} />
           <li>
           <Container>
@@ -595,11 +604,11 @@ const SidebarMap = () => {
                               <fieldset className="form-group">
                                 <div className="form-check form-check-inline">
                                   <Field className="form-check-input" type="checkbox" value={"crosswalk"} name="checkbox" id="checkboxshortexcludecrosswalkid" />
-                                  <label className="form-check-label" htmlFor="checkboxshortexcludecrosswalkid">횡단보도제외</label>
+                                  <label className="form-check-label" htmlFor="checkboxshortexcludecrosswalkid">횡단보도최소</label>
                                 </div>
                                 <div className="form-check form-check-inline">
                                   <Field className="form-check-input" type="checkbox" value={"bridge"} name="checkbox" id="checkboxshortexcludefootbridgeid"/>
-                                  <label className="form-check-label" htmlFor="checkboxshortexcludefootbridgeid">육교제외</label>
+                                  <label className="form-check-label" htmlFor="checkboxshortexcludefootbridgeid">육교최소</label>
                                 </div>
                               </fieldset>
                             </Row>
@@ -650,29 +659,17 @@ const SidebarMap = () => {
                               <label htmlFor="weightslopeid" className="form-label">경사도 가중치</label>
                               <Field type="range" name="weightslope" className="form-range" min="1" max="11" step="0.5" id="weightslopeid" style={{width:"90%"}}/>
                             </fieldset>
-                            <fieldset className="form-group">
-                              <label htmlFor="weighttoiletid" className="form-label">화장실 가중치</label>
-                              <Field type="range" name="weighttoilet" className="form-range" min="0" max="10" step="0.5" id="weighttoiletid" style={{width:"90%"}}/>
-                            </fieldset>
-                            <fieldset className="form-group">
-                              <label htmlFor="weightdrinkid" className="form-label">급수대 가중치</label>
-                              <Field type="range" name="weightdrink" className="form-range" min="0" max="10" step="0.5" id="weightdrinkid" style={{width:"90%"}}/>
-                            </fieldset>
-                            <fieldset className="form-group">
-                              <label htmlFor="weightcrosswalkid" className="form-label">횡단보도 가중치</label>
-                              <Field type="range" name="weightcrosswalk" className="form-range" min="0" max="10" step="0.5" id="weightcrosswalkid" style={{width:"90%"}}/>
-                            </fieldset>
                           </Row>
                           <Row>
                             <fieldset className="form-group">
                               <hr style={{width:"90%"}} />
                               <div className="form-check form-check-inline">
                                 <Field className="form-check-input" type="checkbox" value={"crosswalk"} name="checkboxoptimalexclude" id="checkboxoptimalexcludecrosswalkid" />
-                                <label className="form-check-label" htmlFor="checkboxoptimalexcludecrosswalkid">횡단보도제외</label>
+                                <label className="form-check-label" htmlFor="checkboxoptimalexcludecrosswalkid">횡단보도최소</label>
                               </div>
                               <div className="form-check form-check-inline">
                                 <Field className="form-check-input" type="checkbox" value={"bridge"} name="checkboxoptimalexclude" id="checkboxoptimalexcludefootbridgeid"/>
-                                <label className="form-check-label" htmlFor="checkboxoptimalexcludefootbridgeid">육교제외</label>
+                                <label className="form-check-label" htmlFor="checkboxoptimalexcludefootbridgeid">육교최소</label>
                               </div>
                             </fieldset>
                           </Row>

@@ -10,6 +10,9 @@ import { Graticule ,Vector as VectorLayer} from 'ol/layer'
 import {GeoJSON} from 'ol/format'
 import VectorSource from 'ol/source/Vector';
 import { Icon, Style } from 'ol/style';
+import {defaults} from 'ol/control'
+import {AddtoiletControl} from '../mapcontrol/control'
+
 
 const MapComponent = ({children})=>{
   const [map,setMap]= useState(new Map())
@@ -29,7 +32,7 @@ const MapComponent = ({children})=>{
           zIndex:10,
           style:new Style({
             image : new Icon({
-              src: "../img/toilet.png",
+              src: "/img/toilet.png",
               scale:0.5
             })
           })
@@ -67,6 +70,7 @@ const MapComponent = ({children})=>{
   // 구조분해로 받기
   useEffect(() => {
     const Mapinstance = new Map({
+      controls:defaults().extend([new AddtoiletControl()]),
       target: 'map',  // 하위 요소 중 id 가 map 인 element가 있어야함.
       layers: [
           new Tile({
