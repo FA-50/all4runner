@@ -13,7 +13,7 @@ import { Draw } from 'ol/interaction'
 import { getLength } from 'ol/sphere';
 import { transform  } from 'ol/proj'
 
-import { addcoord ,excludeOpt,AddingJSONLayerToMap,createPoint, deleteAllLayer,drawing, makingHttpRequestBody } from '../js/function'
+import { excludeOpt,AddingJSONLayerToMap,createPoint, deleteAllLayer,drawing, makingHttpRequestBody } from '../js/sidebar_map_function'
 
 
 const SidebarMap = () => {
@@ -40,7 +40,7 @@ const SidebarMap = () => {
   mapdispatch({type:"getmap"})
 
   // 마우스 클릭으로 최단경로를 생성하는 콜백함수
-  const createRoutebyMouse = ({checkbox,checkboxdistance})=>{
+  const createRoutebyMouse = ({weightslope,checkbox,checkboxdistance})=>{
 
     // 거리제한 없음
     var distanceshort ;
@@ -72,7 +72,7 @@ const SidebarMap = () => {
         var initdistance = getLength(geom3857); // 단위: 미터
 
         // 거리제한 설정 여부
-        if (checkboxdistance.length==0){
+        if (checkboxdistance.length===0){
           // 체크박스 체크 안하면 거리제한 없음
           distanceshort= 99999999999;
         }else{
@@ -80,7 +80,7 @@ const SidebarMap = () => {
           distanceshort=initdistance;
         }
 
-        // 거리표현
+        // // 거리표현
         setDrawdistance(Math.round(initdistance));
       })
     })
@@ -108,7 +108,7 @@ const SidebarMap = () => {
     const addcoord = (evt) => {
 
       // 더블클릭이 수행될때까지 작동
-      if (clickend==false){
+      if (clickend===false){
         // 좌표 획득 후 배열에 입력 및 포인트 생성
         var clickedcoord = evt.coordinate;
         coordarr[iter]=clickedcoord
@@ -134,11 +134,11 @@ const SidebarMap = () => {
 
         // , 로 구분되는 위도 , 경도 좌표의 문자열을 생성하여
         // Spring에서 @RequestBody로 받을 Object 객체 정의하는 function
-        const coorddistanceobject = makingHttpRequestBody(totalpointcount,coordarr,distanceshort,excludeoption)
+        const coorddistanceobject = makingHttpRequestBody(weightslope,totalpointcount,coordarr,distanceshort,excludeoption)
 
         // 로딩 표현
         setLoading(true)
-
+        console.log(coorddistanceobject)
 
         // excludeoption 초기화
         excludeoption=0
@@ -164,157 +164,7 @@ const SidebarMap = () => {
     mapstate.on('click',addcoord)
     // 더블클릭 이벤트 : 경로 생성 끝
     mapstate.on('dblclick',()=>{clickend=true})
-  }
-
-
-
-   // 마우스 클릭으로 최단경로를 생성하는 콜백함수
-  const createOptimalRoutebyMouse = ({weightcrosswalk,weightdrink,weightslope,weighttoilet,checkboxoptimalexclude,checkboxdistance})=>{
-
-    // 거리제한 없음
-    var distanceshort ;
-
-    // draw 기능 작동
-    var drawsource = drawing(mapstate)
-    var draw = new Draw({
-      source:drawsource,
-      type : 'LineString',
-      minPoints : 2
-    })
-    mapstate.addInteraction(draw)
-
-    // draw 거리정보 제공
-    draw.on('drawstart', (evt)=>{
-      evt.feature.getGeometry().on('change',(geomEvt)=>{
-        var coords = geomEvt.target.getCoordinates();
-        if (coords.length < 2) {
-          setDrawdistance(0);
-          return;
-        }
-
-        // EPSG:4326 → EPSG:3857로 변환
-        var coords3857 = coords.map((c) => transform(c, 'EPSG:4326', 'EPSG:3857'));
-        var geom3857 = new LineString(coords3857);
-
-        // 거리 설정
-        // getLength : ol / sphere
-        var initdistance = getLength(geom3857); // 단위: 미터
-
-        // 거리제한 설정 여부
-        if (checkboxdistance.length==0){
-          // 체크박스 체크 안하면 거리제한 없음
-          distanceshort= 99999999999;
-        }else{
-          // 체크 시 draw 거리를 한정해서 거리제한.
-          distanceshort=initdistance;
-        }
-
-        // 거리표현
-        setDrawdistance(Math.round(initdistance));
-      })
-    })
-
-    
-    // 경로생성 버튼 숨김
-    setActive(true)
-    // 점 클릭 메시지 지시
-    setShowGuide1(true)
-     // 오류 발생 메시지 표시 x
-    setShowGuide2(false)
-
-
-    // 횡단보도, 육교 제외여부
-    var excludeoption = excludeOpt(checkboxoptimalexclude)
-    console.log(excludeoption)
-
-    
-
-
-    // 초기 설정
-    var coordarr = []
-    var iter=0
-    var clickend = false
-    
-    var firstlastpoints;
-
-    
-
-    // 클릭이벤트로로 얻는 좌표를 배열로 넣는 콜백함수
-    const addcoord = (evt) => {
-
-      // 더블클릭이 수행될때까지 작동
-      if (clickend==false){
-        // 좌표 획득 후 배열에 입력 및 포인트 생성
-        var clickedcoord = evt.coordinate;
-        coordarr[iter]=clickedcoord
-
-        // 해당 좌표로 포인팅 용도로 포인트를 생성하는 함수
-        createPoint(coordarr[iter++],0,mapstate)
-      }
-      else{ // 더블 클릭 후 dblclick 이벤트 작동 시 작용
-
-        // 이벤트 해제
-        mapstate.un('click',addcoord)
-        // 안내문 해제
-        setShowGuide1(false)
-        // Draw 기능 종료
-        mapstate.removeInteraction(draw)
-
-
-        // 포인트 총 갯수
-        var totalpointcount = coordarr.length;
-        
-        // 시작점 끝점 아이콘 지정용
-        firstlastpoints = [coordarr[0],coordarr[totalpointcount-1]]
-
-        var xcoord = ""
-        var ycoord = ""
-        // , 로 구분되는 위도 , 경도 좌표의 문자열을 생성.
-        for( var i=0;i<totalpointcount;i++){
-          if (i==totalpointcount-1){
-            xcoord += coordarr[i][0].toString()
-            ycoord += coordarr[i][1].toString()
-          }else{
-            xcoord = xcoord + coordarr[i][0].toString() + ","
-            ycoord += coordarr[i][1].toString() + ","
-          }
-        }
-        
-        // Spring에서 @RequestBody로 받을 Object 객체 정의하기.
-        const coorddistanceobject = {
-          xcoord : xcoord,
-          ycoord : ycoord,
-          totpointcount : totalpointcount,
-          distance : distanceshort,
-          excludeoption : excludeoption
-        }
-        setLoading(true)
-        excludeoption=0
-
-        // 경로 생성을 위한 API 호출 
-        retrieveOptimalRouteApiStopOver(coorddistanceobject)
-        .then((result)=>{
-          AddingJSONLayerToMap(result.data,firstlastpoints,mapstate,setShowGuide2,setLoading,setActive)
-          // 로딩창 표시
-        })
-        .catch((error)=>{
-          // 오류발생시 안내문 표시
-          console.log(error)
-          setShowGuide2(true)
-          setLoading(false)
-          setActive(false)
-          deleteAllLayer(mapstate)
-        })
-        .finally(console.log("실행끝"))
-      }
-    }
-    var evtData = {}
-    // 선 생성 이벤트 실행
-    mapstate.on('click',e=>{addcoord(e,evtData)})
-    // 더블클릭 이벤트 : 경로 생성 끝
-    mapstate.on('dblclick',()=>{clickend=true})
-  }
-  
+  } 
 
   return (
     <>
@@ -354,7 +204,7 @@ const SidebarMap = () => {
                 </button>
                 <ul className="dropdown-menu">
                   <li><button className="dropdown-item" onClick={()=>{setExploreOption(1)}}>최단경로탐색</button></li>
-                  <li><button className="dropdown-item" onClick={()=>{setExploreOption(2)}}>최적경로탐색</button></li>
+                  <li><button className="dropdown-item" onClick={()=>{setExploreOption(2)}}>위치검색</button></li>
                 </ul>
               </div>
               </Col>
@@ -362,12 +212,12 @@ const SidebarMap = () => {
           </Container>
           </li>
           <hr style={{width:"90%"}} />
-          { exploreopt == 1 ? 
+          { exploreopt === 1 ? 
             <li>
-            <h3>최단경로탐색</h3>
+            <h3>최적경로탐색</h3>
             <hr style={{width:"50%"}} />
               {
-                <Formik initialValues={{ checkbox :  [],checkboxdistance:[]}}
+                <Formik initialValues={{ weightslope:0,checkbox :  [],checkboxdistance:[]}}
                 enableReinitialize={true}
                 onSubmit={(value)=>{createRoutebyMouse(value)}}>
                   {
@@ -376,6 +226,13 @@ const SidebarMap = () => {
                           <Container>
                             <Row>
                               <fieldset className="form-group">
+                                <label htmlFor="weightslopeid" className="form-label">경사도 가중치</label>
+                                <Field type="range" name="weightslope" className="form-range" min="0" max="20" step="5" id="weightslopeid" style={{width:"90%"}}/>
+                              </fieldset>
+                            </Row>
+                            <Row>
+                              <fieldset className="form-group">
+                                <hr style={{width:"90%"}} />
                                 <div className="form-check form-check-inline">
                                   <Field className="form-check-input" type="checkbox" value={"crosswalk"} name="checkbox" id="checkboxshortexcludecrosswalkid" />
                                   <label className="form-check-label" htmlFor="checkboxshortexcludecrosswalkid">횡단보도최소</label>
@@ -416,63 +273,8 @@ const SidebarMap = () => {
               }
             </li>
           : <div/>}
-          { exploreopt == 2 ?
+          { exploreopt === 2 ?
           <li>
-          <h3>최적경로탐색</h3>
-          <hr style={{width:"50%"}} />
-            {
-              <Formik initialValues={{weightslope:5.5, weighttoilet:5, weightdrink:5, weightcrosswalk:5 , checkboxdistance:[], checkboxoptimalexclude:[]}}
-              enableReinitialize={true}
-              onSubmit={(value)=>{console.log(value);createOptimalRoutebyMouse(value)}}>
-                {
-                  (props)=>(
-                    <Form className="container-fluid">
-                        <Container>
-                          <Row>
-                            <fieldset className="form-group">
-                              <label htmlFor="weightslopeid" className="form-label">경사도 가중치</label>
-                              <Field type="range" name="weightslope" className="form-range" min="1" max="11" step="0.5" id="weightslopeid" style={{width:"90%"}}/>
-                            </fieldset>
-                          </Row>
-                          <Row>
-                            <fieldset className="form-group">
-                              <hr style={{width:"90%"}} />
-                              <div className="form-check form-check-inline">
-                                <Field className="form-check-input" type="checkbox" value={"crosswalk"} name="checkboxoptimalexclude" id="checkboxoptimalexcludecrosswalkid" />
-                                <label className="form-check-label" htmlFor="checkboxoptimalexcludecrosswalkid">횡단보도최소</label>
-                              </div>
-                              <div className="form-check form-check-inline">
-                                <Field className="form-check-input" type="checkbox" value={"bridge"} name="checkboxoptimalexclude" id="checkboxoptimalexcludefootbridgeid"/>
-                                <label className="form-check-label" htmlFor="checkboxoptimalexcludefootbridgeid">육교최소</label>
-                              </div>
-                            </fieldset>
-                          </Row>
-                          <Row style={{marginTop:10}}>
-                            <hr style={{width:"90%"}} />
-                              <fieldset className="form-group">
-                                <div className="form-check form-check-inline">
-                                      <Field className="form-check-input" type="checkbox" value={"distancelimitactive"} name="checkboxdistance" id="distancelimitid"/>
-                                      <label className="form-check-label" htmlFor="distancelimitid">거리제한 시 체크</label>
-                                </div>
-                                <hr style={{width:"90%"}} />
-                              </fieldset>
-                              <Col xs={12} md={12} lg={12}>
-                                { active ? 
-                                <div className="alert alert-light" role="alert" style={{width:"90%",marginTop:10}}>
-                                최소거리 : {drawdistance} m
-                                </div>
-                                :
-                                <button type="submit" className="btn btn-primary" style={{marginTop:10}}>경로생성</button> 
-                                }
-                              </Col>
-                            </Row>
-                            <hr style={{width:"90%"}} />
-                        </Container>
-                      </Form>
-                  )
-                }
-              </Formik>
-            }
           </li>
           : <div/>}
           <li>

@@ -11,7 +11,10 @@ import {GeoJSON} from 'ol/format'
 import VectorSource from 'ol/source/Vector';
 import { Icon, Style } from 'ol/style';
 import {defaults} from 'ol/control'
-import {AddtoiletControl} from '../mapcontrol/control'
+import {AddtoiletControl,AddBorderline} from '../mapcontrol/control'
+import {bbox} from 'ol/loadingstrategy'
+
+import {SetToilet} from '../js/map_control_function'
 
 
 const MapComponent = ({children})=>{
@@ -22,11 +25,14 @@ const MapComponent = ({children})=>{
       case "getmap":
         return map
       case "settoilet":
+        console.log(map.getLayers().array_.length)
         const toiletsource = new VectorSource({
-          format:new GeoJSON(),
-          url : 'http://localhost:8080/geoserver/all4runner/ows?service=WFS&version=1.0.0&request=GetFeature&typeName=all4runner%3Adongdaemun_toilet&outputFormat=application%2Fjson',
-          serverType:'geoserver'
+          format : new GeoJSON(),
+          url : 'http://localhost:8080/geoserver/all4runner/ows?service=WFS&version=1.0.0&request=GetFeature&typeName=all4runner%3Adongdaemun_toilet&maxFeatures=50&outputFormat=application%2Fjson',
+          serverType:'geoserver',
+          strategy:bbox,
         })
+        console.log(toiletsource)
         const toiletlayer = new VectorLayer({
           source:toiletsource,
           zIndex:10,
@@ -38,7 +44,13 @@ const MapComponent = ({children})=>{
           })
         })
         toiletlayer.setMap(map)
+        map.render()
+        console.log(map.getLayers().array_.length)
         break;
+      case "untoilet":
+        map.removeLayer(toiletlayer)
+        break;
+
       case "setborder":
         const borderimagesource = new TileWMS({
           url:'http://localhost:8080/geoserver/all4runner/wms',
@@ -62,15 +74,12 @@ const MapComponent = ({children})=>{
   }
 
 
-
-
-
   // useReducer State 비동기 해결용용
   const [mapstate, mapdispatch]=useReducer(reducer1,undefined)
   // 구조분해로 받기
   useEffect(() => {
     const Mapinstance = new Map({
-      controls:defaults().extend([new AddtoiletControl()]),
+      controls:defaults().extend([new AddtoiletControl({mapdispatch}), new AddBorderline({mapdispatch})]),
       target: 'map',  // 하위 요소 중 id 가 map 인 element가 있어야함.
       layers: [
           new Tile({

@@ -29,7 +29,7 @@ export const deleteAllLayer = (mapstate) =>{
   }
 }
 
-// Map상에 경로 생성을 위해 클릭 시 포인트 생성하는 함수
+// Map상에 경로 생성을 위해 클릭 시 좌표를 입력받아아 지시용 포인트를 Vector Layer로 생성하는 함수
 export const createPoint=(coord,opt,mapstate)=>{
   var xcoord = coord[0]
   var ycoord = coord[1]
@@ -37,7 +37,7 @@ export const createPoint=(coord,opt,mapstate)=>{
     geometry : new Point([xcoord,ycoord]),
   })
   var featurestyle;
-  if (opt==0){
+  if (opt===0){
       featurestyle = new Style({
         image : new CircleStyle({
           radius: 6,
@@ -77,7 +77,7 @@ export const MakeFeatureFromJSON = (jsonarr) =>{
   var prelinktype=["일반"];
 
   jsonarr.map((json)=>{
-    if (i==0){
+    if (i===0){
       prelinktype[i]="일반"
     }
     var crosswalk = json.crosswalk;
@@ -100,42 +100,40 @@ export const MakeFeatureFromJSON = (jsonarr) =>{
           });
     // 보행로 종류 별 색상 배정
     // 해당 link가 횡단보도 인 경우 붉은색
-    if(crosswalk==1){ 
+    if(crosswalk===1){ 
       innerlinestyle = new Style({ stroke : new Stroke({color :'#ff0000',width : 6}),zIndex:11})
       prelinktype[i]="횡단보도"
       // 이전 link가 동일한 종류인 경우 count하지 않는다.
-      if(prelinktype[i-1]!="횡단보도"){ 
+      if(prelinktype[i-1]!=="횡단보도"){ 
         crosswalkcnt++ 
       }
 
-    }else if(footbridge == 1 | bridge == 1){
+    }else if(footbridge === 1 | bridge === 1){
       // 다리, 육교인 경우 오렌지색
       innerlinestyle = new Style({ stroke : new Stroke({color :'#FFA500',width : 6}),zIndex:12})
       prelinktype[i]="육교"
-      if(prelinktype[i-1]!="육교"){ 
+      if(prelinktype[i-1]!=="육교"){ 
         bridgecnt++ 
-    }else if(park==1){
+    }else if(park===1){
       // 공원, 녹지 길인 경우 녹색
       innerlinestyle = new Style({ stroke : new Stroke({color :'#32CD32',width : 6}),zIndex:13})
       prelinktype[i]="공원"
-      if(prelinktype[i-1]!="공원"){ 
+      if(prelinktype[i-1]!=="공원"){ 
         parkcnt++ 
       }}
-    }else if(subwaynetw==1 | tunnel==1){
+    }else if(subwaynetw===1 | tunnel===1){
       // 터널, 지하철네트워크인 경우 갈색 
       innerlinestyle = new Style({ stroke : new Stroke({color :'#D2691E',width : 6}),zIndex:10})
       prelinktype[i]="터널"
-      if(prelinktype[i-1]=="터널"){ 
+      if(prelinktype[i-1]==="터널"){ 
         tunnelcnt++ 
       } 
     }else{
       // 모두 해당하지 않는 경우 회색
       innerlinestyle = new Style({ stroke : new Stroke({color :'#708090',width : 6}),zIndex:9})
-      outerlinestyle = new Style({})
       prelinktype[i]="일반"
     };
     geojsonfeature.setStyle([outerlinestyle,innerlinestyle])
-
     featurearr[i++]= geojsonfeature
     return featurearr
   })
@@ -145,7 +143,7 @@ export const MakeFeatureFromJSON = (jsonarr) =>{
 
 // 경로 한개 선택 시 json 배열을 입력받아서 경로생성
 export const AddingJSONLayerToMap = ( jsonarr , firstlastpoints, mapstate,setShowGuide2,setLoading,setActive )=>{
-  if (jsonarr.length==0){
+  if (jsonarr.length===0){
     setShowGuide2(true)
     deleteAllLayer(mapstate)
     setLoading(false)
@@ -187,30 +185,30 @@ export const AddingJSONLayerToMap = ( jsonarr , firstlastpoints, mapstate,setSho
 // 횡단보도, 육교 제외여부
 export const excludeOpt = (checkbox)=>{
   var excludeoption;
-  if (checkbox.length==0){
-    // 횡단보도, 육교 전부 포함시 1
-    excludeoption = 1
-  }else if(checkbox.length==1 && checkbox[0]=="crosswalk"){
-    // 횡단보도 제외 시 2
-    excludeoption = 2
-  }else if(checkbox.length==1 && checkbox[0]=="bridge"){
+  if (checkbox.length===0){
+    // 횡단보도, 육교 전부 포함시 
+    excludeoption = "excludenone"
+  }else if(checkbox.length===1 && checkbox[0]==="crosswalk"){
+    // 횡단보도 제외 시 
+    excludeoption = "excludecrosswalk"
+  }else if(checkbox.length===1 && checkbox[0]==="bridge"){
     // 육교 제외 시 3
-    excludeoption = 3
+    excludeoption = "excludebridge"
   }else{
     // 횡단보도, 육교 제외 시 4
-    excludeoption = 4
+    excludeoption = "excludeall"
   }
   return excludeoption;
 }
 
  // , 로 구분되는 위도 , 경도 좌표의 문자열을 생성하여여
   // Spring에서 @RequestBody로 받을 Object 객체 정의하는 function
-export const makingHttpRequestBody = (totalpointcount,coordarr,distanceshort,excludeoption)=>{
+export const makingHttpRequestBody = (weightslope,totalpointcount,coordarr,distanceshort,excludeoption)=>{
   var xcoord = ""
   var ycoord = ""
   
   for( var i=0;i<totalpointcount;i++){
-    if (i==totalpointcount-1){
+    if (i===totalpointcount-1){
       xcoord += coordarr[i][0].toString()
       ycoord += coordarr[i][1].toString()
     }else{
@@ -219,6 +217,7 @@ export const makingHttpRequestBody = (totalpointcount,coordarr,distanceshort,exc
     }
   }
   const coorddistanceobject = {
+    weightslope:weightslope,
     xcoord : xcoord,
     ycoord : ycoord,
     totpointcount : totalpointcount,
