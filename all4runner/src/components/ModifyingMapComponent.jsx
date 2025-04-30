@@ -1,4 +1,3 @@
-import {useMapContext}  from '../Context/MapContext'
 import SidebarMap from './Sidebar_map'
 import {FaBars} from 'react-icons/fa'
 import { useGlobalContext } from '../Context/SidebarContext'

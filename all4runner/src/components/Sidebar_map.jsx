@@ -4,17 +4,17 @@ import { useGlobalContext } from '../Context/SidebarContext'
 import { FaHome } from 'react-icons/fa';
 import { Container, Row , Col } from 'react-bootstrap'
 import {Formik , Field , Form } from "formik"
-import {retrieveRouteApiStopOver,retrieveOptimalRouteApiStopOver} from '../axios/ApiOpenlayers'
+import {retrieveRouteApiStopOver} from '../axios/ApiOpenlayers'
 import {useMapContext} from '../Context/MapContext'
-
 import { LineString } from 'ol/geom'
 import { Draw } from 'ol/interaction'
-
 import { getLength } from 'ol/sphere';
 import { transform  } from 'ol/proj'
-
 import { excludeOpt,AddingJSONLayerToMap,createPoint, deleteAllLayer,drawing, makingHttpRequestBody } from '../js/sidebar_map_function'
 
+
+
+import PortalComponent  from '../components/PortalComponent'
 
 const SidebarMap = () => {
   // 사이드바를 Context에서 가져옴
@@ -34,7 +34,11 @@ const SidebarMap = () => {
   const [ active , setActive ] = useState(false)
   // Draw 거리 정보
   const [ drawdistance , setDrawdistance ] = useState(0)
+  // 생성된 link 정보를 지시하는 Modal 창 표시여부
+  const [isShowmodalOpen , setShowmodalOpen]=useState(false)
   
+  // Modal에 지시할 정보의의 초기값 정의
+  const [modalinfo,setModalInfo] = useState({totdistance:0,crosswalkcnt:0,bridgecnt:0,parkcnt:0});
   
   // Map 초기화
   mapdispatch({type:"getmap"})
@@ -64,7 +68,7 @@ const SidebarMap = () => {
         }
 
         // EPSG:4326 → EPSG:3857로 변환
-        var coords3857 = coords.map((c) => transform(c, 'EPSG:4326', 'EPSG:3857'));
+        var coords3857 = coords.map((c) => transform(c, 'EPSG:4326', 'EPSG:3857')); 
         var geom3857 = new LineString(coords3857);
 
         // 거리 설정
@@ -95,10 +99,8 @@ const SidebarMap = () => {
 
     // 횡단보도, 육교 제외여부
     var excludeoption = excludeOpt(checkbox)
-    console.log(excludeoption)
 
     // 초기 설정
-
     var clickend = false
     var coordarr = []
     var iter=0    
@@ -138,7 +140,6 @@ const SidebarMap = () => {
 
         // 로딩 표현
         setLoading(true)
-        console.log(coorddistanceobject)
 
         // excludeoption 초기화
         excludeoption=0
@@ -146,8 +147,8 @@ const SidebarMap = () => {
         // 경로 생성을 위한 API 호출 
         retrieveRouteApiStopOver(coorddistanceobject)
         .then((result)=>{
-          AddingJSONLayerToMap(result.data,firstlastpoints,mapstate,setShowGuide2,setLoading,setActive)
-          // 로딩창 표시
+          // Map상에 link 생성 후 link 정보 반환.
+          setModalInfo(AddingJSONLayerToMap(result.data,firstlastpoints,mapstate,setShowGuide2,setLoading,setActive,setShowmodalOpen))
         })
         .catch((error)=>{
           // 오류발생시 안내문 표시
@@ -168,6 +169,23 @@ const SidebarMap = () => {
 
   return (
     <>
+    {/* ReactDOM.createPortal을 이용해 경로정보표현 */ }
+      <PortalComponent>
+        <div className={`${isShowmodalOpen ?"card border-dark mb-3 attributemodal":"" }`} style={{position: 'fixed', zIndex: 1000,width:"30vh"}}>
+            <Container className="card-header">
+              <Row>
+                <Col xs={10} md={10} lg={10}>생성된 경로 정보</Col>
+                <Col xs={2} md={2} lg={2}><button className="closemodal" onClick={()=>{setShowmodalOpen(false)}}><FaTimes/></button></Col>
+              </Row>
+            </Container>
+          <div className="card-body">
+            <p className="card-text" style={{margin:"2px"}}>총거리 : {Math.round(modalinfo.totdistance)}m</p>
+            <p className="card-text" style={{margin:"2px"}}>횡단보도 수 : {modalinfo.crosswalkcnt}</p>
+            <p className="card-text" style={{margin:"2px"}}>육교, 다리 수 : {modalinfo.bridgecnt}</p>
+            <p className="card-text" style={{margin:"2px"}}>공원길 수 : {modalinfo.parkcnt}</p>
+          </div>
+        </div>
+      </PortalComponent>
       <aside className={`${isSidebarOpen? 'sidebar show-sidebar':'sidebar'}`}>
         {/* 사이드바 메뉴 */}
         <ul className="links" style={{marginTop:"5px"}}>
@@ -290,3 +308,4 @@ const SidebarMap = () => {
   )
 }
 export default SidebarMap;
+

@@ -13,3 +13,23 @@
   justify-content: center;
   z-index:0;
 }
+
+.attributemodal{
+  position: fixed;
+  bottom: 10rem;
+  right: 0rem;
+  transform: translate(-50%, -50%);
+  background: white;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+  z-index: 1000;
+}
+
+.closemodal{
+  font-size: 1rem;
+  background: transparent;
+  border-color: transparent;
+  color: var(--clr-primary-5);
+  transition: var(--transition);
+  cursor: pointer;
+  right :0.5;
+}

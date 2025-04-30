@@ -12,7 +12,7 @@ export const useGlobalContext = ()=>{
 
 export default function AppProvider({children}){
   const[isSidebarOpen, setIsSidebarOpen]=useState(false)
-  const [isModalOpen, setIsModalOpen]= useState(false)
+  const [isModalOpen, setIsModalOpen]= useState(true)
   const openSidebar = ()=>{
     setIsSidebarOpen(true)
   }

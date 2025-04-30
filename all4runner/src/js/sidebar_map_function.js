@@ -142,7 +142,7 @@ export const MakeFeatureFromJSON = (jsonarr) =>{
 
 
 // 경로 한개 선택 시 json 배열을 입력받아서 경로생성
-export const AddingJSONLayerToMap = ( jsonarr , firstlastpoints, mapstate,setShowGuide2,setLoading,setActive )=>{
+export const AddingJSONLayerToMap = ( jsonarr , firstlastpoints, mapstate,setShowGuide2,setLoading,setActive, setShowmodalOpen)=>{
   if (jsonarr.length===0){
     setShowGuide2(true)
     deleteAllLayer(mapstate)
@@ -169,16 +169,23 @@ export const AddingJSONLayerToMap = ( jsonarr , firstlastpoints, mapstate,setSho
     // Vector Layer 생성 시 Vector Source의 geom 범위로 Viewport의 확대를 수행
     mapstate.getView().fit(jsonvectorsource1.getExtent(),{duration:500})
     console.log(`총 거리 : ${jsonarr[jsonarr.length-1].totdistance}`)
-    console.log(`횡단보도 수 : ${countarr[0]}`)
-    console.log(`다리 수 : ${countarr[1]}`)
-    console.log(`공원 수 : ${countarr[2]}`)
-    console.log(`터널 수 : ${countarr[3]}`)
     createPoint(firstlastpoints[0],1,mapstate)
     createPoint(firstlastpoints[1],1,mapstate)
     mapstate.render()
     // 로딩창종료
     setLoading(false)
+    // 경로생성 버튼 다시 지시.
     setActive(false)
+    // 정보 지시
+    setShowmodalOpen(true)
+    // link 정보 반환.
+    const info = { 
+      totdistance:jsonarr[jsonarr.length-1].totdistance,
+      crosswalkcnt:countarr[0],
+      bridgecnt:countarr[1],
+      parkcnt:countarr[2]
+    }
+    return info
   }
 }
 
