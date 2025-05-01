@@ -4,13 +4,13 @@ import { useGlobalContext } from '../Context/SidebarContext'
 import { FaHome } from 'react-icons/fa';
 import { Container, Row , Col } from 'react-bootstrap'
 import {Formik , Field , Form } from "formik"
-import {retrieveRouteApiStopOver} from '../axios/ApiOpenlayers'
+import {retrieveRouteStopOverApi , retrievePointByDistanceApi,retrieveRouteApi} from '../axios/ApiOpenlayers'
 import {useMapContext} from '../Context/MapContext'
 import { LineString } from 'ol/geom'
 import { Draw } from 'ol/interaction'
 import { getLength } from 'ol/sphere';
 import { transform  } from 'ol/proj'
-import { excludeOpt,AddingJSONLayerToMap,createPoint, deleteAllLayer,drawing, makingHttpRequestBody } from '../js/sidebar_map_function'
+import { excludeOpt,AddingJSONLayerToMap,createPoint, deleteAllLayer,drawing, makingHttpRequestBody,createRouteOnMap} from '../js/sidebar_map_function'
 
 
 
@@ -21,7 +21,6 @@ const SidebarMap = () => {
   const { isSidebarOpen , closeSidebar } = useGlobalContext()
   // useReducer을 통한 map instance 불러오기
   const { mapstate,mapdispatch } = useMapContext()
-
   // 육교, 횡단보도 state
   const [ exploreopt , setExploreOption ] = useState(null)
   // 버튼 지정 안내문 표시 여부
@@ -35,20 +34,33 @@ const SidebarMap = () => {
   // Draw 거리 정보
   const [ drawdistance , setDrawdistance ] = useState(0)
   // 생성된 link 정보를 지시하는 Modal 창 표시여부
-  const [isShowmodalOpen , setShowmodalOpen]=useState(false)
+  const [ isShowmodalOpen , setShowmodalOpen ]=useState(false)
   
-  // Modal에 지시할 정보의의 초기값 정의
-  const [modalinfo,setModalInfo] = useState({totdistance:0,crosswalkcnt:0,bridgecnt:0,parkcnt:0});
-  
+
+  // Modal에 지시할 정보의 초기값 정의
+  const [modalinfo,setModalInfo] = useState({totdistance:0,crosswalkcnt:0,bridgecnt:0,tunnelcnt:0,drinkcnt:0,toiletcnt:0});
+
+
+  // 최적경로자동생성 조작 Process 옵션
+  const [ autoCreateOpt , SetAutoCreateOpt ] = useState(0);
+  // 최적경로자동생성 시작점 좌표
+  const [ startpointcoord , SetStartPointCoord] = useState(null);
+  // 사용자 설정 거리제한정보 저장
+  const [ limitdistance , SetLimitDistance] = useState(0);
+  // 최적경로자동생성 예상 도착점 좌표배열
+  const [ targetpointarr, SetTargetPointArr ] = useState([])
+  // Distance 설정 후 Nodeid를 못찾을때 표현하는 에러메세지 표현여부
+  const [ iserrorfindnode, SetIsErrorFindNode ] = useState(false);
+  const [ showErrorOccured , SetShowErrorOccured  ] = useState(false);
+
   // Map 초기화
   mapdispatch({type:"getmap"})
 
-  // 마우스 클릭으로 최단경로를 생성하는 콜백함수
-  const createRoutebyMouse = ({weightslope,checkbox,checkboxdistance})=>{
+  // 시점,중간점, 종점을 마우스 클릭하여 경로를 생성하는 콜백함수
+  const createRoutebyClick = ({weightslope,checkbox,checkboxdistance})=>{
 
     // 거리제한 없음
     var distanceshort ;
-
     // draw 기능 작동
     var drawsource = drawing(mapstate)
     var draw = new Draw({
@@ -112,8 +124,7 @@ const SidebarMap = () => {
       // 더블클릭이 수행될때까지 작동
       if (clickend===false){
         // 좌표 획득 후 배열에 입력 및 포인트 생성
-        var clickedcoord = evt.coordinate;
-        coordarr[iter]=clickedcoord
+        coordarr[iter]=evt.coordinate;
 
         // 해당 좌표로 포인팅 용도로 포인트를 생성하는 함수
         createPoint(coordarr[iter++],0,mapstate)
@@ -145,7 +156,7 @@ const SidebarMap = () => {
         excludeoption=0
 
         // 경로 생성을 위한 API 호출 
-        retrieveRouteApiStopOver(coorddistanceobject)
+        retrieveRouteStopOverApi(coorddistanceobject)
         .then((result)=>{
           // Map상에 link 생성 후 link 정보 반환.
           setModalInfo(AddingJSONLayerToMap(result.data,firstlastpoints,mapstate,setShowGuide2,setLoading,setActive,setShowmodalOpen))
@@ -167,6 +178,90 @@ const SidebarMap = () => {
     mapstate.on('dblclick',()=>{clickend=true})
   } 
 
+  // 자동경로 생성 시 시점을 지정하는 콜백함수
+  const setStartPoint = ()=>{
+    SetShowErrorOccured(false)
+    // Map 상 Tilemap 제외 Layer를 모두 삭제하여 초기화
+    deleteAllLayer(mapstate)
+    // 클릭 이벤트를 통해 좌표를 획득하는 콜백함수
+    const aquireclickcoord = (evt)=>{
+      var coord = evt.coordinate;
+      // 포인트 생성
+      createPoint(coord,0,mapstate)
+      // State에 좌표정보 전달
+      SetStartPointCoord(coord)
+      // 다음 Process로 설정
+      SetAutoCreateOpt(2)
+      // 클릭 이벤트 해제
+      mapstate.un('click',aquireclickcoord)
+    }
+    mapstate.on('click',aquireclickcoord)
+  }
+
+  // 거리에 존재하는 node id를 가져오는 콜백함수
+  const setDistance = ({distance})=>{
+    SetLimitDistance(distance)
+    // Http Request Body 생성
+    const httprequestobject = {
+      distance:distance,
+      xcoord:startpointcoord[0],
+      ycoord:startpointcoord[1]
+    }
+    // API 전달
+    retrievePointByDistanceApi(httprequestobject)
+    .then((result)=>{
+      if(result.data.length>5){
+        SetTargetPointArr(result.data)
+        SetAutoCreateOpt(3)
+        SetIsErrorFindNode(false)
+      }else{
+        SetIsErrorFindNode(true)
+        setDistance(distance)
+      }
+    })
+    .catch((error)=>{
+      console.log(error)
+      SetShowErrorOccured(true)
+    })
+    .finally(console.log("예비도착점좌표배열가져오기실행끝"))
+  }
+
+  const createMultipleRoutes = ({routecnt,weightslope,checkbox})=>{
+      // 경로생성중 상태 지시
+    SetAutoCreateOpt(4)
+    setLoading(true)
+    
+    // 횡단보도, 육교 제외여부
+    var excludeoption = excludeOpt(checkbox)
+    for(var i=0; i<routecnt;i++){
+      var randomnodeid = targetpointarr[Math.floor(Math.random() * targetpointarr.length)].nodeId
+      // Http Request Body 생성
+      // Target Node는 매 Iter마다 Random으로 선정.
+      var httprequestobject = {
+        xcoord : startpointcoord[0],
+        ycoord : startpointcoord[1],
+        distance:limitdistance,
+        targetnodeid : randomnodeid,
+        excludeoption : excludeoption,
+        weightslope:weightslope,
+        iter:i
+      }
+      // API 전달
+      retrieveRouteApi(httprequestobject)
+      .then((result)=>{
+        createRouteOnMap(result.data,mapstate,SetShowErrorOccured,SetAutoCreateOpt,setLoading)
+      })
+      .catch((error)=>{
+        console.log(error)
+      })
+      .finally(
+        console.log(`${i}번째 경로 생성`)
+      )
+    }
+  }
+
+  
+
   return (
     <>
     {/* ReactDOM.createPortal을 이용해 경로정보표현 */ }
@@ -182,7 +277,8 @@ const SidebarMap = () => {
             <p className="card-text" style={{margin:"2px"}}>총거리 : {Math.round(modalinfo.totdistance)}m</p>
             <p className="card-text" style={{margin:"2px"}}>횡단보도 수 : {modalinfo.crosswalkcnt}</p>
             <p className="card-text" style={{margin:"2px"}}>육교, 다리 수 : {modalinfo.bridgecnt}</p>
-            <p className="card-text" style={{margin:"2px"}}>공원길 수 : {modalinfo.parkcnt}</p>
+            <p className="card-text" style={{margin:"2px"}}>인접화장실 수 : {modalinfo.toiletcnt}</p>
+            <p className="card-text" style={{margin:"2px"}}>인접급수대 수 : {modalinfo.drinkcnt}</p>
           </div>
         </div>
       </PortalComponent>
@@ -218,11 +314,12 @@ const SidebarMap = () => {
               <Col xs={6} md={6} lg={6}>
               <div className="dropdown">
                 <button className="btn btn-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
-                경로탐색
+                옵션
                 </button>
                 <ul className="dropdown-menu">
-                  <li><button className="dropdown-item" onClick={()=>{setExploreOption(1)}}>최단경로탐색</button></li>
-                  <li><button className="dropdown-item" onClick={()=>{setExploreOption(2)}}>위치검색</button></li>
+                  <li><button className="dropdown-item" onClick={()=>{setExploreOption(1)}}>경로계획</button></li>
+                  <li><button className="dropdown-item" onClick={()=>{setExploreOption(2)}}>경로탐색</button></li>
+                  <li><button className="dropdown-item" onClick={()=>{setExploreOption(3)}}>위치검색</button></li>
                 </ul>
               </div>
               </Col>
@@ -232,12 +329,12 @@ const SidebarMap = () => {
           <hr style={{width:"90%"}} />
           { exploreopt === 1 ? 
             <li>
-            <h3>최적경로탐색</h3>
+            <h3>최적경로계획</h3>
             <hr style={{width:"50%"}} />
               {
                 <Formik initialValues={{ weightslope:0,checkbox :  [],checkboxdistance:[]}}
                 enableReinitialize={true}
-                onSubmit={(value)=>{createRoutebyMouse(value)}}>
+                onSubmit={(value)=>{createRoutebyClick(value)}}>
                   {
                     (props)=>(
                       <Form className="container-fluid">
@@ -292,6 +389,104 @@ const SidebarMap = () => {
             </li>
           : <div/>}
           { exploreopt === 2 ?
+          <li>
+            <h3>최적경로탐색</h3>
+            <hr style={{width:"50%"}} />
+              { autoCreateOpt === 0 ? 
+                <button type="submit" className="btn btn-primary"
+                onClick={()=>{SetAutoCreateOpt(1);setStartPoint()}}>
+                  시작점 지정
+                </button>
+              : 
+                <></>
+              }
+              { autoCreateOpt === 1 ? <p className="card-test"> 경로를 생성할 시작점을 클릭해주세요.</p> : <></>}
+              { autoCreateOpt === 2 ? 
+                <Formik initialValues={{ distance:0 }} enableReinitialize={true} onSubmit={(value)=>{setDistance(value)}}>
+                  {
+                    (props)=>(
+                      <Form className="container-fluid">
+                            <Container>
+                              <Row>
+                                <fieldset className="form-group">
+                                  <label className="form-label" style={{marginRight:"10px"}} htmlFor="distance">거리 :</label>
+                                  <Field type="number" name="distance" id="distanceid" min="0" max="40000" style={{width:"150px"}} /><span> m</span>
+                                  <div id="numberHelpBlock" className="form-text">
+                                    [ 0 , 40000 ] 사이의 숫자를 입력해주세요.
+                                  </div>
+                                  { iserrorfindnode ? <p style={{marginTop:"5px",color:"red"}}>거리를 낮춰주세요.</p>:<></>}
+                                </fieldset>
+                              </Row>
+                              <Row style={{marginTop:10}}>
+                                <hr style={{width:"90%"}} />
+                                <Col xs={6} md={6} lg={6}>
+                                  <button type="submit" className="btn btn-primary" style={{marginTop:10}}>거리설정</button> 
+                                </Col>
+                              </Row>
+                            </Container>
+                      </Form>
+                    )
+                  }
+              </Formik> : <></> }
+              { autoCreateOpt===3 ? 
+                <Formik initialValues={{ routecnt:0,weightslope:0,checkbox :[]}}
+                enableReinitialize={true}
+                onSubmit={(value)=>{createMultipleRoutes(value)}}>
+                  {
+                    (props)=>(
+                      <Form className="container-fluid">
+                          <Container>
+                            <Row style={{marginTop:10}}> 
+                              <fieldset className="form-group">
+                                <label className="form-label" style={{marginRight:"10px"}} htmlFor="routecntid">생성할 경로 수 : </label>
+                                <Field type="number" name="routecnt" id="routecntid" min="0" max="5" style={{width:"60px"}}/>
+                                <div id="numberHelpBlock" className="form-text">
+                                  0~5 사이의 숫자를 입력해주세요.
+                                </div>
+                              </fieldset>
+                            </Row>
+                            <Row style={{marginTop:10}}>
+                              <hr style={{width:"90%"}} />
+                              <fieldset className="form-group">
+                                <label htmlFor="weightslopeid" className="form-label">경사도 가중치</label>
+                                <Field type="range" name="weightslope" className="form-range" min="0" max="20" step="5" id="weightslopeid" style={{width:"90%"}}/>
+                              </fieldset>
+                            </Row>
+                            <Row style={{marginTop:5}}>
+                              <hr style={{width:"90%"}} />
+                              <fieldset className="form-group">
+                                <div className="form-check form-check-inline">
+                                  <Field className="form-check-input" type="checkbox" value={"crosswalk"} name="checkbox" id="checkboxshortexcludecrosswalkid" />
+                                  <label className="form-check-label" htmlFor="checkboxshortexcludecrosswalkid">횡단보도최소</label>
+                                </div>
+                                <div className="form-check form-check-inline">
+                                  <Field className="form-check-input" type="checkbox" value={"bridge"} name="checkbox" id="checkboxshortexcludefootbridgeid"/>
+                                  <label className="form-check-label" htmlFor="checkboxshortexcludefootbridgeid">육교최소</label>
+                                </div>
+                              </fieldset>
+                            </Row>
+                            <Row style={{marginTop:10}}>
+                              <hr style={{width:"90%"}} />
+                              <Col xs={6} md={6} lg={6}>
+                                <button type="submit" className="btn btn-primary" style={{marginTop:10}}>경로생성</button> 
+                              </Col>
+                            </Row>
+                            <hr style={{width:"90%"}} />
+                            { showguide1 ? <div>맵 상단에 이동할 구간을 클릭하세요.</div> : <div></div> }
+                            { showguide2 ? <div>경로 생성에 문제가 발생했습니다.</div> : <div></div> }
+                          </Container>
+                        </Form>
+                    )
+                  }
+                </Formik>
+              : <></> }
+              { autoCreateOpt===4 ? <div style={{marginBottom:"20px"}}>경로 생성중...
+              { showErrorOccured ? <div>일부 경로 생성에 문제가 발생했습니다.</div> : <div></div> }
+              <hr style={{width:"90%"}} />
+              </div> : <></> }
+          </li>
+          : <div/>}
+          { exploreopt === 3 ?
           <li>
           </li>
           : <div/>}

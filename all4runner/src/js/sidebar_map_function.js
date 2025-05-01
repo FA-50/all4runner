@@ -40,7 +40,7 @@ export const createPoint=(coord,opt,mapstate)=>{
   if (opt===0){
       featurestyle = new Style({
         image : new CircleStyle({
-          radius: 6,
+          radius: 4,
           fill: new Fill({ color: 'red' }),  // 내부 색상
           stroke: new Stroke({ color: 'white', width: 2 }), // 테두리
         }),
@@ -68,14 +68,15 @@ export const createPoint=(coord,opt,mapstate)=>{
 
 // 각 행의 json 데이터를 각각의 feature 데이터로 생성하여 Feature 배열로 반환하는 함수
 export const MakeFeatureFromJSON = (jsonarr) =>{
-  var featurearr=[]
+  
+  // 초기값 설정
+  var featurearr=[];
   var i=0
   var bridgecnt=0;
   var crosswalkcnt=0;
-  var parkcnt=0;
-  var tunnelcnt=0;
+  var toiletcnt=0;
+  var drinkcnt=0;
   var prelinktype=["일반"];
-
   jsonarr.map((json)=>{
     if (i===0){
       prelinktype[i]="일반"
@@ -83,10 +84,11 @@ export const MakeFeatureFromJSON = (jsonarr) =>{
     var crosswalk = json.crosswalk;
     var footbridge = json.footbridge;
     var bridge = json.bridge;
-    var park = json.park;
     var subwaynetw = json.subwaynetw;
-    var tunnel = json.tunnel;
     var geojson = json.geojson;
+    var istoilet = json.istoilet;
+    var isdrink = json.isdrink;
+    var tunnel = json.tunnel;
     
     var geojsonfeature = new GeoJSON().readFeature(geojson,{featureProjection: 'EPSG:4326'})
 
@@ -114,21 +116,26 @@ export const MakeFeatureFromJSON = (jsonarr) =>{
       prelinktype[i]="육교"
       if(prelinktype[i-1]!=="육교"){ 
         bridgecnt++ 
-    }else if(park===1){
-      // 공원, 녹지 길인 경우 녹색
-      innerlinestyle = new Style({ stroke : new Stroke({color :'#32CD32',width : 6}),zIndex:13})
-      prelinktype[i]="공원"
-      if(prelinktype[i-1]!=="공원"){ 
-        parkcnt++ 
-      }}
+    }
     }else if(subwaynetw===1 | tunnel===1){
       // 터널, 지하철네트워크인 경우 갈색 
-      innerlinestyle = new Style({ stroke : new Stroke({color :'#D2691E',width : 6}),zIndex:10})
-      prelinktype[i]="터널"
-      if(prelinktype[i-1]==="터널"){ 
-        tunnelcnt++ 
-      } 
-    }else{
+      innerlinestyle = new Style({ stroke : new Stroke({color :'#D2691E',width : 6}),zIndex:15})
+    }else if(istoilet===1){
+      // 화장실에 해당하는 경우 
+      innerlinestyle = new Style({ stroke : new Stroke({color :'#FF7F50',width : 6}),zIndex:16})
+      prelinktype[i]="화장실"
+      if(prelinktype[i-1]!=="화장실"){ 
+        toiletcnt++ 
+      }
+    }else if(isdrink===1){
+      // 급수대에 해당하는 경우 
+      innerlinestyle = new Style({ stroke : new Stroke({color :'#1E90FF',width : 6}),zIndex:16})
+      prelinktype[i]="급수대"
+      if(prelinktype[i-1]!=="급수대"){ 
+        drinkcnt++ 
+      }
+    }
+    else{
       // 모두 해당하지 않는 경우 회색
       innerlinestyle = new Style({ stroke : new Stroke({color :'#708090',width : 6}),zIndex:9})
       prelinktype[i]="일반"
@@ -137,7 +144,7 @@ export const MakeFeatureFromJSON = (jsonarr) =>{
     featurearr[i++]= geojsonfeature
     return featurearr
   })
-  return { countarr : [crosswalkcnt,bridgecnt,parkcnt,tunnelcnt] , featurearr: featurearr};
+  return { countarr : [crosswalkcnt,bridgecnt,toiletcnt,drinkcnt] , featurearr: featurearr};
 }
 
 
@@ -168,7 +175,6 @@ export const AddingJSONLayerToMap = ( jsonarr , firstlastpoints, mapstate,setSho
     mapstate.addLayer(jsonvectorlayer1)
     // Vector Layer 생성 시 Vector Source의 geom 범위로 Viewport의 확대를 수행
     mapstate.getView().fit(jsonvectorsource1.getExtent(),{duration:500})
-    console.log(`총 거리 : ${jsonarr[jsonarr.length-1].totdistance}`)
     createPoint(firstlastpoints[0],1,mapstate)
     createPoint(firstlastpoints[1],1,mapstate)
     mapstate.render()
@@ -183,9 +189,33 @@ export const AddingJSONLayerToMap = ( jsonarr , firstlastpoints, mapstate,setSho
       totdistance:jsonarr[jsonarr.length-1].totdistance,
       crosswalkcnt:countarr[0],
       bridgecnt:countarr[1],
-      parkcnt:countarr[2]
+      toiletcnt:countarr[2],
+      drinkcnt:countarr[3]
     }
     return info
+  }
+}
+
+// 경로 생성
+export const createRouteOnMap = (jsonarr,mapstate,SetShowErrorOccured,SetAutoCreateOpt,setLoading)=>{
+  if (jsonarr.length===0){ 
+    SetShowErrorOccured(true)
+  } else{
+    // 각 행의 json 데이터를 각각의 feature 데이터로 생성하여 
+    // Feature 배열로 반환.
+    var { featurearr } = MakeFeatureFromJSON(jsonarr)
+    var jsonvectorsource1 = new VectorSource({
+      features : featurearr
+    })
+    var jsonvectorlayer1 = new VectorLayer({
+      source : jsonvectorsource1,
+      zIndex:100,
+    })
+    // Context에서 Global State로서 전달된 Map instance에 Layer 추가
+    mapstate.addLayer(jsonvectorlayer1)
+    mapstate.render()
+    SetAutoCreateOpt(0)
+    setLoading(false)
   }
 }
 
@@ -223,7 +253,7 @@ export const makingHttpRequestBody = (weightslope,totalpointcount,coordarr,dista
       ycoord += coordarr[i][1].toString() + ","
     }
   }
-  const coorddistanceobject = {
+  const httprequestobject = {
     weightslope:weightslope,
     xcoord : xcoord,
     ycoord : ycoord,
@@ -231,5 +261,5 @@ export const makingHttpRequestBody = (weightslope,totalpointcount,coordarr,dista
     distance : distanceshort,
     excludeoption : excludeoption
   }
-  return coorddistanceobject
+  return httprequestobject
 }
