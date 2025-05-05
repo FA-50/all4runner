@@ -108,7 +108,7 @@ export const MakeFeatureFromJSON = (jsonarr) =>{
     // drawSelectColorOption = 1 ( 최적경로 ) 는 색상배정.
     switch(drawSelectColorOption){
       case 0:
-        innerlinestyle = new Style({ stroke : new Stroke({color :'#FFFFFF',width : 6}),zIndex:4})
+        innerlinestyle = new Style({ stroke : new Stroke({color :'#FFFFFF',width : 6}),zIndex:11})
         break;
       default:
         // 보행로 종류 별 색상 배정
@@ -219,10 +219,20 @@ export const createRouteOnMap = (jsonarr,mapstate,SetShowErrorOccured,SetAutoCre
     var jsonvectorsource1 = new VectorSource({
       features : featurearr
     })
-    var jsonvectorlayer1 = new VectorLayer({
-      source : jsonvectorsource1,
-      zIndex:100,
-    })
+    var jsonvectorlayer1;
+    // 생성 경로 중 최적경로일 경우 최상단에 표현.
+    if (jsonarr[0].drawSelectColorOption==1){
+      jsonvectorlayer1 = new VectorLayer({
+        source : jsonvectorsource1,
+        zIndex:100,
+      })
+    } else{
+      jsonvectorlayer1 = new VectorLayer({
+        source : jsonvectorsource1,
+        zIndex:99,
+      })
+    }
+    
     // Context에서 Global State로서 전달된 Map instance에 Layer 추가
     mapstate.addLayer(jsonvectorlayer1)
     mapstate.render()
