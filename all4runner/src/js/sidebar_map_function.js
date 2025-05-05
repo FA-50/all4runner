@@ -4,6 +4,7 @@ import { Point} from 'ol/geom'
 import { Style, Stroke , Circle as CircleStyle , Fill , Icon} from 'ol/style'
 import {Feature} from 'ol'
 import { GeoJSON } from 'ol/format';
+import { retrievePointByDistanceApi, createMultipleRouteApi , retrieveMultipleRouteApi,initDBRouteTableApi} from '../axios/ApiOpenlayers'
 
  // draw 기능에 필요한 draw vector source를 제공하는 함수
 export const drawing = (mapstate)=>{
@@ -23,7 +24,7 @@ export const deleteAllLayer = (mapstate) =>{
   var maplayerlength = mapstate.getLayers().array_.length 
     
   // map에서 해당 index의 layer를 가져온 후 map에서 삭제
-  for(var i=1;i<maplayerlength;i++){
+  for(let i=1;i<maplayerlength;i++){
     const layerinstance = mapstate.getLayers().item(1)
     mapstate.removeLayer(layerinstance) 
   }
@@ -78,17 +79,19 @@ export const MakeFeatureFromJSON = (jsonarr) =>{
   var drinkcnt=0;
   var prelinktype=["일반"];
   jsonarr.map((json)=>{
+    var { crosswalk,footbridge,bridge,subwaynetw,geojson,
+      istoilet,isdrink,tunnel } = json
+
+    var drawSelectColorOption
+    try{
+      drawSelectColorOption = json.drawSelectColorOption;
+    } catch{
+      drawSelectColorOption=1
+    }
+
     if (i===0){
       prelinktype[i]="일반"
     }
-    var crosswalk = json.crosswalk;
-    var footbridge = json.footbridge;
-    var bridge = json.bridge;
-    var subwaynetw = json.subwaynetw;
-    var geojson = json.geojson;
-    var istoilet = json.istoilet;
-    var isdrink = json.isdrink;
-    var tunnel = json.tunnel;
     
     var geojsonfeature = new GeoJSON().readFeature(geojson,{featureProjection: 'EPSG:4326'})
 
@@ -100,46 +103,55 @@ export const MakeFeatureFromJSON = (jsonarr) =>{
               width: 9,           // 라인 두께
             }),
           });
-    // 보행로 종류 별 색상 배정
-    // 해당 link가 횡단보도 인 경우 붉은색
-    if(crosswalk===1){ 
-      innerlinestyle = new Style({ stroke : new Stroke({color :'#ff0000',width : 6}),zIndex:11})
-      prelinktype[i]="횡단보도"
-      // 이전 link가 동일한 종류인 경우 count하지 않는다.
-      if(prelinktype[i-1]!=="횡단보도"){ 
-        crosswalkcnt++ 
-      }
+    
+    // drawSelectColorOption = 0 ( 최적경로 아님 ) 은 검정색.
+    // drawSelectColorOption = 1 ( 최적경로 ) 는 색상배정.
+    switch(drawSelectColorOption){
+      case 0:
+        innerlinestyle = new Style({ stroke : new Stroke({color :'#FFFFFF',width : 6}),zIndex:4})
+        break;
+      default:
+        // 보행로 종류 별 색상 배정
+        // 해당 link가 횡단보도 인 경우 붉은색
+        if(crosswalk===1){ 
+          innerlinestyle = new Style({ stroke : new Stroke({color :'#ff0000',width : 6}),zIndex:11})
+          prelinktype[i]="횡단보도"
+          // 이전 link가 동일한 종류인 경우 count하지 않는다.
+          if(prelinktype[i-1]!=="횡단보도"){ 
+            crosswalkcnt++ 
+          }
 
-    }else if(footbridge === 1 | bridge === 1){
-      // 다리, 육교인 경우 오렌지색
-      innerlinestyle = new Style({ stroke : new Stroke({color :'#FFA500',width : 6}),zIndex:12})
-      prelinktype[i]="육교"
-      if(prelinktype[i-1]!=="육교"){ 
-        bridgecnt++ 
-    }
-    }else if(subwaynetw===1 | tunnel===1){
-      // 터널, 지하철네트워크인 경우 갈색 
-      innerlinestyle = new Style({ stroke : new Stroke({color :'#D2691E',width : 6}),zIndex:15})
-    }else if(istoilet===1){
-      // 화장실에 해당하는 경우 
-      innerlinestyle = new Style({ stroke : new Stroke({color :'#FF7F50',width : 6}),zIndex:16})
-      prelinktype[i]="화장실"
-      if(prelinktype[i-1]!=="화장실"){ 
-        toiletcnt++ 
+        }else if(footbridge === 1 | bridge === 1){
+          // 다리, 육교인 경우 오렌지색
+          innerlinestyle = new Style({ stroke : new Stroke({color :'#FFA500',width : 6}),zIndex:12})
+          prelinktype[i]="육교"
+          if(prelinktype[i-1]!=="육교"){ 
+            bridgecnt++ 
+        }
+        }else if(subwaynetw===1 | tunnel===1){
+          // 터널, 지하철네트워크인 경우 갈색 
+          innerlinestyle = new Style({ stroke : new Stroke({color :'#D2691E',width : 6}),zIndex:15})
+        }else if(istoilet===1){
+          // 화장실에 해당하는 경우 
+          innerlinestyle = new Style({ stroke : new Stroke({color :'#FF7F50',width : 6}),zIndex:16})
+          prelinktype[i]="화장실"
+          if(prelinktype[i-1]!=="화장실"){ 
+            toiletcnt++ 
+          }
+        }else if(isdrink===1){
+          // 급수대에 해당하는 경우 
+          innerlinestyle = new Style({ stroke : new Stroke({color :'#1E90FF',width : 6}),zIndex:16})
+          prelinktype[i]="급수대"
+          if(prelinktype[i-1]!=="급수대"){ 
+            drinkcnt++ 
+          }
+        }
+        else{
+          // 모두 해당하지 않는 경우 회색
+          innerlinestyle = new Style({ stroke : new Stroke({color :'#708090',width : 6}),zIndex:9})
+          prelinktype[i]="일반"
+        };
       }
-    }else if(isdrink===1){
-      // 급수대에 해당하는 경우 
-      innerlinestyle = new Style({ stroke : new Stroke({color :'#1E90FF',width : 6}),zIndex:16})
-      prelinktype[i]="급수대"
-      if(prelinktype[i-1]!=="급수대"){ 
-        drinkcnt++ 
-      }
-    }
-    else{
-      // 모두 해당하지 않는 경우 회색
-      innerlinestyle = new Style({ stroke : new Stroke({color :'#708090',width : 6}),zIndex:9})
-      prelinktype[i]="일반"
-    };
     geojsonfeature.setStyle([outerlinestyle,innerlinestyle])
     featurearr[i++]= geojsonfeature
     return featurearr
@@ -185,25 +197,25 @@ export const AddingJSONLayerToMap = ( jsonarr , firstlastpoints, mapstate,setSho
     // 정보 지시
     setShowmodalOpen(true)
     // link 정보 반환.
-    const info = { 
+    return { 
       totdistance:jsonarr[jsonarr.length-1].totdistance,
       crosswalkcnt:countarr[0],
       bridgecnt:countarr[1],
       toiletcnt:countarr[2],
       drinkcnt:countarr[3]
     }
-    return info
   }
 }
 
 // 경로 생성
 export const createRouteOnMap = (jsonarr,mapstate,SetShowErrorOccured,SetAutoCreateOpt,setLoading)=>{
+  var countarr={totdistance:0,crosswalkcnt:0,bridgecnt:0,tunnelcnt:0,drinkcnt:0,toiletcnt:0};
   if (jsonarr.length===0){ 
     SetShowErrorOccured(true)
   } else{
     // 각 행의 json 데이터를 각각의 feature 데이터로 생성하여 
     // Feature 배열로 반환.
-    var { featurearr } = MakeFeatureFromJSON(jsonarr)
+    var { countarr , featurearr } = MakeFeatureFromJSON(jsonarr)
     var jsonvectorsource1 = new VectorSource({
       features : featurearr
     })
@@ -216,6 +228,13 @@ export const createRouteOnMap = (jsonarr,mapstate,SetShowErrorOccured,SetAutoCre
     mapstate.render()
     SetAutoCreateOpt(0)
     setLoading(false)
+  }
+  return { 
+    totdistance:jsonarr[jsonarr.length-1].totdistance,
+    crosswalkcnt:countarr[0],
+    bridgecnt:countarr[1],
+    toiletcnt:countarr[2],
+    drinkcnt:countarr[3]
   }
 }
 
@@ -262,4 +281,120 @@ export const makingHttpRequestBody = (weightslope,totalpointcount,coordarr,dista
     excludeoption : excludeoption
   }
   return httprequestobject
+}
+
+// 자동경로 생성 시 시점을 지정하는 콜백함수
+export const setStartPoint = (mapstate,SetShowErrorOccured,SetStartPointCoord,SetAutoCreateOpt)=>{
+   // 경로를 생성할 DB 경로 Table 초기화
+  initDBRouteTableApi()
+  .then((result)=>{
+    console.log(result.data)
+  }).catch((err)=>{
+    console.log(err)
+  }).finally("경로초기화완료")
+
+  SetShowErrorOccured(false)
+  // Map 상 Tilemap 제외 Layer를 모두 삭제하여 초기화
+  deleteAllLayer(mapstate)
+  // 클릭 이벤트를 통해 좌표를 획득하는 콜백함수
+  const aquireclickcoord = (evt)=>{
+    var coord = evt.coordinate;
+    // 포인트 생성
+    createPoint(coord,0,mapstate)
+    // State에 좌표정보 전달
+    SetStartPointCoord(coord)
+    // 다음 Process로 설정
+    SetAutoCreateOpt(2)
+    // 클릭 이벤트 해제
+    mapstate.un('click',aquireclickcoord)
+  }
+  mapstate.on('click',aquireclickcoord)
+}
+
+// 거리에 존재하는 node id를 가져오는 콜백함수
+export const setDistance = ({distance},SetLimitDistance,startpointcoord,SetTargetPointArr,SetAutoCreateOpt,SetIsErrorFindNode,SetShowErrorOccured)=>{
+  SetLimitDistance(distance)
+  // Http Request Body 생성
+  const httprequestobject = {
+    distance:distance,
+    xcoord:startpointcoord[0],
+    ycoord:startpointcoord[1]
+  }
+  // API 전달
+  retrievePointByDistanceApi(httprequestobject)
+  .then((result)=>{
+    if(result.data.length>5){
+      SetTargetPointArr(result.data)
+      SetAutoCreateOpt(3)
+      SetIsErrorFindNode(false)
+    }else{
+      SetIsErrorFindNode(true)
+      setDistance(distance)
+    }
+  })
+  .catch((error)=>{
+    console.log(error)
+    SetShowErrorOccured(true)
+  })
+  .finally(console.log("예비도착점좌표배열가져오기실행끝"))
+}
+
+// 거리 설정 완료 후 벡터 생성 Api 전달후 경로를 표현하는 함수
+export const createMultipleRoutes = ({routecnt,weightslope,checkbox},SetAutoCreateOpt,setLoading,targetpointarr,limitdistance,startpointcoord,SetShowErrorOccured,mapstate,setModalInfo,setShowmodalOpen)=>{
+  // 경로생성중 상태 지시
+  SetAutoCreateOpt(4)
+  setLoading(true)
+
+  // 경로 생성 및 최적경로 조회
+  createAndLoadRoute(routecnt,targetpointarr,checkbox,startpointcoord,limitdistance,weightslope,mapstate,SetShowErrorOccured,SetAutoCreateOpt,setLoading,setModalInfo,setShowmodalOpen)
+}
+
+// async await 활용해서 경로가 DB에서 모두 생성된 후 Map상에 한꺼번에 조회되도록 설정.
+async function createAndLoadRoute(routecnt,targetpointarr,checkbox,startpointcoord,limitdistance,weightslope,mapstate,SetShowErrorOccured,SetAutoCreateOpt,setLoading,setModalInfo,setShowmodalOpen){
+  // 횡단보도, 육교 제외여부
+  var excludeoption = excludeOpt(checkbox)
+
+  for(let i=1; i<=routecnt;i++){
+    var randomnodeid = targetpointarr[Math.floor(Math.random() * targetpointarr.length)].nodeId
+    // Http Request Body 생성
+    // Target Node는 매 Iter마다 Random으로 선정.
+    const httprequestobject1 = {
+      xcoord : startpointcoord[0],
+      ycoord : startpointcoord[1],
+      distance:limitdistance,
+      targetnodeid : randomnodeid,
+      excludeoption : excludeoption,
+      weightslope:weightslope,
+      iter:i
+    }
+        // 경로생성 API 전달
+    try{
+      const result1 = await createMultipleRouteApi(httprequestobject1)
+      console.log(result1.data)
+    }catch(error){
+      console.log(error)
+    }finally{
+      console.log(`${i}번째 경로 생성`)
+    }
+  }
+  // 생성한 경로를 Api를 통해 조회 및 불러와서 Map상에 표현
+  for (let i=1; i<=routecnt ; i++){
+    var tablenm = "linknum"+i
+    const httprequestobject2 = { tablenm : tablenm }
+    // 생성한 경로 선택해서 가져오기
+    try{
+      const result2 = await retrieveMultipleRouteApi(httprequestobject2)
+      var moduleinfo = createRouteOnMap(result2.data,mapstate,SetShowErrorOccured,SetAutoCreateOpt,setLoading)
+      if (result2.data[0].drawSelectColorOption === 1){
+        // 생성된 경로 중 가장 최적경로의 정보 표현 및
+        // 모달창 표현
+        setModalInfo(moduleinfo)
+        setShowmodalOpen(true)
+      }
+    }catch(error){
+      console.log(error)
+    }finally{
+      console.log("경로 조회끝")
+    }
+  }
 }

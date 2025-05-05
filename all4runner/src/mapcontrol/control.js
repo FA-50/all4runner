@@ -10,7 +10,7 @@ export class AddtoiletControl extends Control{
   constructor({mapdispatch},opt_options={}) {
     const options = opt_options || {};
     const button = document.createElement('button');
-    button.innerHTML = 'toilet';
+    button.innerHTML = '화장실';
     button.className = 'btn btn-dark';
     const element = document.createElement('div');
     element.className = 'addtoilet'
@@ -41,7 +41,7 @@ export class AddBorderline extends Control{
   constructor({mapdispatch},opt_options={}) {
     const options = opt_options || {};
     const button = document.createElement('button');
-    button.innerHTML = 'Border';
+    button.innerHTML = '음수대';
     button.className = 'btn btn-dark';
     const element = document.createElement('div');
     element.className = 'addborder'

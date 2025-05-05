@@ -4,13 +4,13 @@ import { useGlobalContext } from '../Context/SidebarContext'
 import { FaHome } from 'react-icons/fa';
 import { Container, Row , Col } from 'react-bootstrap'
 import {Formik , Field , Form } from "formik"
-import {retrieveRouteStopOverApi , retrievePointByDistanceApi,retrieveRouteApi} from '../axios/ApiOpenlayers'
+import {retrieveRouteStopOverApi} from '../axios/ApiOpenlayers'
 import {useMapContext} from '../Context/MapContext'
 import { LineString } from 'ol/geom'
 import { Draw } from 'ol/interaction'
 import { getLength } from 'ol/sphere';
 import { transform  } from 'ol/proj'
-import { excludeOpt,AddingJSONLayerToMap,createPoint, deleteAllLayer,drawing, makingHttpRequestBody,createRouteOnMap} from '../js/sidebar_map_function'
+import { excludeOpt,AddingJSONLayerToMap,createPoint, deleteAllLayer,drawing, makingHttpRequestBody,setStartPoint,setDistance, createMultipleRoutes} from '../js/sidebar_map_function'
 
 
 
@@ -158,8 +158,16 @@ const SidebarMap = () => {
         // 경로 생성을 위한 API 호출 
         retrieveRouteStopOverApi(coorddistanceobject)
         .then((result)=>{
-          // Map상에 link 생성 후 link 정보 반환.
-          setModalInfo(AddingJSONLayerToMap(result.data,firstlastpoints,mapstate,setShowGuide2,setLoading,setActive,setShowmodalOpen))
+          if (result.data.length > 0){
+            // Map상에 link 생성 후 link 정보 반환.
+            setModalInfo(AddingJSONLayerToMap(result.data,firstlastpoints,mapstate,setShowGuide2,setLoading,setActive,setShowmodalOpen))
+          }else{
+            setModalInfo({totdistance:0,crosswalkcnt:0,bridgecnt:0,tunnelcnt:0,drinkcnt:0,toiletcnt:0})
+            setShowGuide2(true)
+            setLoading(false)
+            setActive(false)
+            deleteAllLayer(mapstate)
+          }
         })
         .catch((error)=>{
           // 오류발생시 안내문 표시
@@ -177,90 +185,6 @@ const SidebarMap = () => {
     // 더블클릭 이벤트 : 경로 생성 끝
     mapstate.on('dblclick',()=>{clickend=true})
   } 
-
-  // 자동경로 생성 시 시점을 지정하는 콜백함수
-  const setStartPoint = ()=>{
-    SetShowErrorOccured(false)
-    // Map 상 Tilemap 제외 Layer를 모두 삭제하여 초기화
-    deleteAllLayer(mapstate)
-    // 클릭 이벤트를 통해 좌표를 획득하는 콜백함수
-    const aquireclickcoord = (evt)=>{
-      var coord = evt.coordinate;
-      // 포인트 생성
-      createPoint(coord,0,mapstate)
-      // State에 좌표정보 전달
-      SetStartPointCoord(coord)
-      // 다음 Process로 설정
-      SetAutoCreateOpt(2)
-      // 클릭 이벤트 해제
-      mapstate.un('click',aquireclickcoord)
-    }
-    mapstate.on('click',aquireclickcoord)
-  }
-
-  // 거리에 존재하는 node id를 가져오는 콜백함수
-  const setDistance = ({distance})=>{
-    SetLimitDistance(distance)
-    // Http Request Body 생성
-    const httprequestobject = {
-      distance:distance,
-      xcoord:startpointcoord[0],
-      ycoord:startpointcoord[1]
-    }
-    // API 전달
-    retrievePointByDistanceApi(httprequestobject)
-    .then((result)=>{
-      if(result.data.length>5){
-        SetTargetPointArr(result.data)
-        SetAutoCreateOpt(3)
-        SetIsErrorFindNode(false)
-      }else{
-        SetIsErrorFindNode(true)
-        setDistance(distance)
-      }
-    })
-    .catch((error)=>{
-      console.log(error)
-      SetShowErrorOccured(true)
-    })
-    .finally(console.log("예비도착점좌표배열가져오기실행끝"))
-  }
-
-  const createMultipleRoutes = ({routecnt,weightslope,checkbox})=>{
-      // 경로생성중 상태 지시
-    SetAutoCreateOpt(4)
-    setLoading(true)
-    
-    // 횡단보도, 육교 제외여부
-    var excludeoption = excludeOpt(checkbox)
-    for(var i=0; i<routecnt;i++){
-      var randomnodeid = targetpointarr[Math.floor(Math.random() * targetpointarr.length)].nodeId
-      // Http Request Body 생성
-      // Target Node는 매 Iter마다 Random으로 선정.
-      var httprequestobject = {
-        xcoord : startpointcoord[0],
-        ycoord : startpointcoord[1],
-        distance:limitdistance,
-        targetnodeid : randomnodeid,
-        excludeoption : excludeoption,
-        weightslope:weightslope,
-        iter:i
-      }
-      // API 전달
-      retrieveRouteApi(httprequestobject)
-      .then((result)=>{
-        createRouteOnMap(result.data,mapstate,SetShowErrorOccured,SetAutoCreateOpt,setLoading)
-      })
-      .catch((error)=>{
-        console.log(error)
-      })
-      .finally(
-        console.log(`${i}번째 경로 생성`)
-      )
-    }
-  }
-
-  
 
   return (
     <>
@@ -342,7 +266,7 @@ const SidebarMap = () => {
                             <Row>
                               <fieldset className="form-group">
                                 <label htmlFor="weightslopeid" className="form-label">경사도 가중치</label>
-                                <Field type="range" name="weightslope" className="form-range" min="0" max="20" step="5" id="weightslopeid" style={{width:"90%"}}/>
+                                <Field type="range" name="weightslope" className="form-range" min="0" max="100" step="20" id="weightslopeid" style={{width:"90%"}}/>
                               </fieldset>
                             </Row>
                             <Row>
@@ -394,7 +318,7 @@ const SidebarMap = () => {
             <hr style={{width:"50%"}} />
               { autoCreateOpt === 0 ? 
                 <button type="submit" className="btn btn-primary"
-                onClick={()=>{SetAutoCreateOpt(1);setStartPoint()}}>
+                onClick={()=>{SetAutoCreateOpt(1);setStartPoint(mapstate,SetShowErrorOccured,SetStartPointCoord,SetAutoCreateOpt)}}>
                   시작점 지정
                 </button>
               : 
@@ -402,7 +326,7 @@ const SidebarMap = () => {
               }
               { autoCreateOpt === 1 ? <p className="card-test"> 경로를 생성할 시작점을 클릭해주세요.</p> : <></>}
               { autoCreateOpt === 2 ? 
-                <Formik initialValues={{ distance:0 }} enableReinitialize={true} onSubmit={(value)=>{setDistance(value)}}>
+                <Formik initialValues={{ distance:0 }} enableReinitialize={true} onSubmit={(value)=>{setDistance(value,SetLimitDistance,startpointcoord,SetTargetPointArr,SetAutoCreateOpt,SetIsErrorFindNode,SetShowErrorOccured)}}>
                   {
                     (props)=>(
                       <Form className="container-fluid">
@@ -429,9 +353,9 @@ const SidebarMap = () => {
                   }
               </Formik> : <></> }
               { autoCreateOpt===3 ? 
-                <Formik initialValues={{ routecnt:0,weightslope:0,checkbox :[]}}
+                <Formik initialValues={{ routecnt:1,weightslope:0,checkbox :[]}}
                 enableReinitialize={true}
-                onSubmit={(value)=>{createMultipleRoutes(value)}}>
+                onSubmit={(value)=>{createMultipleRoutes(value,SetAutoCreateOpt,setLoading,targetpointarr,limitdistance,startpointcoord,SetShowErrorOccured,mapstate,setModalInfo,setShowmodalOpen)}}>
                   {
                     (props)=>(
                       <Form className="container-fluid">
@@ -439,9 +363,9 @@ const SidebarMap = () => {
                             <Row style={{marginTop:10}}> 
                               <fieldset className="form-group">
                                 <label className="form-label" style={{marginRight:"10px"}} htmlFor="routecntid">생성할 경로 수 : </label>
-                                <Field type="number" name="routecnt" id="routecntid" min="0" max="5" style={{width:"60px"}}/>
+                                <Field type="number" name="routecnt" id="routecntid" min="1" max="5" style={{width:"60px"}}/>
                                 <div id="numberHelpBlock" className="form-text">
-                                  0~5 사이의 숫자를 입력해주세요.
+                                  1~5 사이의 숫자를 입력해주세요.
                                 </div>
                               </fieldset>
                             </Row>
@@ -449,7 +373,7 @@ const SidebarMap = () => {
                               <hr style={{width:"90%"}} />
                               <fieldset className="form-group">
                                 <label htmlFor="weightslopeid" className="form-label">경사도 가중치</label>
-                                <Field type="range" name="weightslope" className="form-range" min="0" max="20" step="5" id="weightslopeid" style={{width:"90%"}}/>
+                                <Field type="range" name="weightslope" className="form-range" min="0" max="100" step="20" id="weightslopeid" style={{width:"90%"}}/>
                               </fieldset>
                             </Row>
                             <Row style={{marginTop:5}}>
