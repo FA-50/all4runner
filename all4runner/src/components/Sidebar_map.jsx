@@ -1,4 +1,4 @@
-import React, { useState} from 'react'
+import React, { useState,useEffect,useRef} from 'react'
 import { FaTimes } from 'react-icons/fa'
 import { useGlobalContext } from '../Context/SidebarContext'
 import { FaHome } from 'react-icons/fa';
@@ -10,7 +10,7 @@ import { LineString } from 'ol/geom'
 import { Draw } from 'ol/interaction'
 import { getLength } from 'ol/sphere';
 import { transform  } from 'ol/proj'
-import { excludeOpt,AddingJSONLayerToMap,createPoint, deleteAllLayer,drawing, makingHttpRequestBody,setStartPoint,setDistance, createMultipleRoutes} from '../js/sidebar_map_function'
+import { excludeOpt,AddingJSONLayerToMap,createPoint, deleteAllLayer,drawing, makingHttpRequestBody,setStartPoint,setDistance, createMultipleRoutes,retrieveClickedRoute} from '../js/sidebar_map_function'
 
 
 
@@ -186,6 +186,47 @@ const SidebarMap = () => {
     mapstate.on('dblclick',()=>{clickend=true})
   } 
 
+
+  // 최적경로생성에서 벡터 생성 후 다른 벡터 선택 시 콜백함수를 정의.
+  // useRef에 콜백함수를 동기적으로 선언하여 
+  // useEffect를 통해 이벤트 종료 시 활용.
+  const clickHandlerRef = useRef(null);
+
+  // 해당 함수는 sidebar_map_function.js의 createAndLoadRoute함수에 의해 작동.
+  const reloadRouteByClick = (routecnt)=>{
+
+    var clickHandler = (evt)=>getFeatureByClick(evt,routecnt)
+    // 동기적으로 useRef에 함수를 선언.
+    clickHandlerRef.current = clickHandler
+    // 생성된 경로 클릭 시 작동 
+    mapstate.on('singleclick',clickHandler)
+  }
+
+  const getFeatureByClick = (evt,routecnt)=>{
+    // 클릭된 경로의 DB Table의 이름 설정.
+    var clickedLinkName;
+    mapstate.forEachFeatureAtPixel(evt.pixel,(feature,layer)=>{
+      if(feature){
+        clickedLinkName=feature.get('LinkTableId');
+      }
+    })
+    // 생성된 경로 클릭 시
+    if (clickedLinkName){
+      // 경로 조회 후 생성 함수 실행
+      retrieveClickedRoute(clickedLinkName,routecnt,mapstate,SetShowErrorOccured,SetAutoCreateOpt,setLoading,setModalInfo,setShowmodalOpen)
+    }else{
+      console.log("클릭된 벡터 없음")
+    }
+  }
+
+  // 이벤트 종료용 useEffect
+  useEffect(()=>{
+    if ( (exploreopt !== 2 || autoCreateOpt!== 0 ) && mapstate && clickHandlerRef.current){
+      mapstate.un('singleclick',clickHandlerRef.current)
+    }
+  },[exploreopt,autoCreateOpt,mapstate])
+  
+
   return (
     <>
     {/* ReactDOM.createPortal을 이용해 경로정보표현 */ }
@@ -355,7 +396,7 @@ const SidebarMap = () => {
               { autoCreateOpt===3 ? 
                 <Formik initialValues={{ routecnt:1,weightslope:0,checkbox :[]}}
                 enableReinitialize={true}
-                onSubmit={(value)=>{createMultipleRoutes(value,SetAutoCreateOpt,setLoading,targetpointarr,limitdistance,startpointcoord,SetShowErrorOccured,mapstate,setModalInfo,setShowmodalOpen)}}>
+                onSubmit={(value)=>{createMultipleRoutes(value,SetAutoCreateOpt,setLoading,targetpointarr,limitdistance,startpointcoord,SetShowErrorOccured,mapstate,setModalInfo,setShowmodalOpen,reloadRouteByClick)}}>
                   {
                     (props)=>(
                       <Form className="container-fluid">

@@ -4,7 +4,7 @@ import { Point} from 'ol/geom'
 import { Style, Stroke , Circle as CircleStyle , Fill , Icon} from 'ol/style'
 import {Feature} from 'ol'
 import { GeoJSON } from 'ol/format';
-import { retrievePointByDistanceApi, createMultipleRouteApi , retrieveMultipleRouteApi,initDBRouteTableApi} from '../axios/ApiOpenlayers'
+import { retrievePointByDistanceApi, createRouteApi , retrieveRouteApi,initDBRouteTableApi,retrieveRouteByClick} from '../axios/ApiOpenlayers'
 
  // draw 기능에 필요한 draw vector source를 제공하는 함수
 export const drawing = (mapstate)=>{
@@ -95,6 +95,11 @@ export const MakeFeatureFromJSON = (jsonarr) =>{
     
     var geojsonfeature = new GeoJSON().readFeature(geojson,{featureProjection: 'EPSG:4326'})
 
+
+    // Feature에 link의 DBtable 이름을 metadata로 등록하기
+    // LinkTableId , 'linknum0'
+    geojsonfeature.set('LinkTableId',json.linktablename)
+
     var innerlinestyle;
           // 외곽선 스타일
     var outerlinestyle = new Style({
@@ -179,10 +184,12 @@ export const AddingJSONLayerToMap = ( jsonarr , firstlastpoints, mapstate,setSho
     var jsonvectorsource1 = new VectorSource({
       features : featurearr
     })
+
     var jsonvectorlayer1 = new VectorLayer({
       source : jsonvectorsource1,
       zIndex:100,
     })
+
     // Context에서 Global State로서 전달된 Map instance에 Layer 추가
     mapstate.addLayer(jsonvectorlayer1)
     // Vector Layer 생성 시 Vector Source의 geom 범위로 Viewport의 확대를 수행
@@ -221,7 +228,7 @@ export const createRouteOnMap = (jsonarr,mapstate,SetShowErrorOccured,SetAutoCre
     })
     var jsonvectorlayer1;
     // 생성 경로 중 최적경로일 경우 최상단에 표현.
-    if (jsonarr[0].drawSelectColorOption==1){
+    if (jsonarr[0].drawSelectColorOption===1){
       jsonvectorlayer1 = new VectorLayer({
         source : jsonvectorsource1,
         zIndex:100,
@@ -350,17 +357,18 @@ export const setDistance = ({distance},SetLimitDistance,startpointcoord,SetTarge
 }
 
 // 거리 설정 완료 후 벡터 생성 Api 전달후 경로를 표현하는 함수
-export const createMultipleRoutes = ({routecnt,weightslope,checkbox},SetAutoCreateOpt,setLoading,targetpointarr,limitdistance,startpointcoord,SetShowErrorOccured,mapstate,setModalInfo,setShowmodalOpen)=>{
+export const createMultipleRoutes = ({routecnt,weightslope,checkbox},SetAutoCreateOpt,setLoading,targetpointarr,limitdistance,startpointcoord,SetShowErrorOccured,mapstate,setModalInfo,setShowmodalOpen,reloadRouteByClick)=>{
   // 경로생성중 상태 지시
   SetAutoCreateOpt(4)
   setLoading(true)
 
   // 경로 생성 및 최적경로 조회
-  createAndLoadRoute(routecnt,targetpointarr,checkbox,startpointcoord,limitdistance,weightslope,mapstate,SetShowErrorOccured,SetAutoCreateOpt,setLoading,setModalInfo,setShowmodalOpen)
+  createAndLoadRoute(routecnt,targetpointarr,checkbox,startpointcoord,limitdistance,weightslope,mapstate,SetShowErrorOccured,SetAutoCreateOpt,setLoading,setModalInfo,setShowmodalOpen,reloadRouteByClick)
+
 }
 
 // async await 활용해서 경로가 DB에서 모두 생성된 후 Map상에 한꺼번에 조회되도록 설정.
-async function createAndLoadRoute(routecnt,targetpointarr,checkbox,startpointcoord,limitdistance,weightslope,mapstate,SetShowErrorOccured,SetAutoCreateOpt,setLoading,setModalInfo,setShowmodalOpen){
+async function createAndLoadRoute(routecnt,targetpointarr,checkbox,startpointcoord,limitdistance,weightslope,mapstate,SetShowErrorOccured,SetAutoCreateOpt,setLoading,setModalInfo,setShowmodalOpen,reloadRouteByClick){
   // 횡단보도, 육교 제외여부
   var excludeoption = excludeOpt(checkbox)
 
@@ -379,7 +387,7 @@ async function createAndLoadRoute(routecnt,targetpointarr,checkbox,startpointcoo
     }
         // 경로생성 API 전달
     try{
-      const result1 = await createMultipleRouteApi(httprequestobject1)
+      const result1 = await createRouteApi(httprequestobject1)
       console.log(result1.data)
     }catch(error){
       console.log(error)
@@ -393,7 +401,7 @@ async function createAndLoadRoute(routecnt,targetpointarr,checkbox,startpointcoo
     const httprequestobject2 = { tablenm : tablenm }
     // 생성한 경로 선택해서 가져오기
     try{
-      const result2 = await retrieveMultipleRouteApi(httprequestobject2)
+      const result2 = await retrieveRouteApi(httprequestobject2)
       var moduleinfo = createRouteOnMap(result2.data,mapstate,SetShowErrorOccured,SetAutoCreateOpt,setLoading)
       if (result2.data[0].drawSelectColorOption === 1){
         // 생성된 경로 중 가장 최적경로의 정보 표현 및
@@ -406,5 +414,38 @@ async function createAndLoadRoute(routecnt,targetpointarr,checkbox,startpointcoo
     }finally{
       console.log("경로 조회끝")
     }
+  }
+  
+  // 이벤트 종료조건때문에 react에서 선언하여 가져온 함수
+  // 경로가 표현된 후 클릭이 될 수 있도록 설정.
+  await reloadRouteByClick(routecnt);
+}
+
+// 생성된 경로클릭 시 클릭된 경로의 이름을 기반으로 경로 조회 후 기존 경로 하나 삭제 후 하나 경로 재생성하는 과정 반복하여 경로 재생성.
+export const retrieveClickedRoute = (clickedLinkName,routecnt,mapstate,SetShowErrorOccured,SetAutoCreateOpt,setLoading,setModalInfo,setShowmodalOpen)=>{
+
+  for(let i=1 ; i <= routecnt; i++){
+    // 0번째 : tile map layer 1번째 : point vector layer 
+    // 2번째에 해당하는 기존 생성된 경로 layer를 하나 삭제 후 새로운 경로 하나 생성하면서 반복.
+    mapstate.removeLayer(mapstate.getLayers().getArray()[2])
+
+    var tablenm = "linknum"+i;
+    const httprequestobject3 = { tablenm : tablenm, 
+      clickedtablenm :  clickedLinkName };
+    // 경로생성 Api 전달
+    retrieveRouteByClick(httprequestobject3)
+    .then((result)=>{
+      // Spring에서 전달된 data로 Vector Layer 생성.
+      var moduleinfo = createRouteOnMap(result.data,mapstate,SetShowErrorOccured,SetAutoCreateOpt,setLoading)
+      if (result.data[0].drawSelectColorOption === 1){
+        // 클릭된 경로의 정보 모달창 표현
+        setModalInfo(moduleinfo)
+        setShowmodalOpen(true)
+      }
+    })
+    .catch((error)=>{
+      console.log(error)
+    })
+    .finally("클릭을 통해 경로조회 끝")
   }
 }

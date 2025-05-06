@@ -15,7 +15,6 @@ export class AddtoiletControl extends Control{
     const element = document.createElement('div');
     element.className = 'addtoilet'
     element.appendChild(button);
-
     const SetToilet = (mapdispatch)=>{
       mapdispatch({type:"settoilet"})
       // if (isActive===false){

@@ -17,11 +17,13 @@ export const retrievePointByDistanceApi = (httprequestobject)=>
 export const initDBRouteTableApi = ()=> apiClient.delete('/initDBroute')
 
 // 시작점좌표와 목표노드 id 및 옵션을 전달받아 경로 생성
-export const createMultipleRouteApi = (httprequestobject)=> apiClient.post('/createRoute' , httprequestobject)
+export const createRouteApi = (httprequestobject)=> apiClient.post('/createRoute' , httprequestobject)
 
-export const retrieveMultipleRouteApi = (httprequestobject)=> apiClient.post('/retrieveRoute',httprequestobject)
+// 경로 생성 후 경로 조회 시 사용
+export const retrieveRouteApi = (httprequestobject)=> apiClient.post('/retrieveRoute',httprequestobject)
 
-
+// 경로 생성 후 클릭을 통해 경로 조회 시 사용
+export const retrieveRouteByClick = (httprequestobject)=> apiClient.post('/retrieveRouteByClick',httprequestobject)
 
 // 화장실 벡터 데이터를 도출하는 axios api
 export const retrieveToiletApi = ()=>{
