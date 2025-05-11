@@ -33,3 +33,11 @@
   cursor: pointer;
   right :0.5;
 }
+
+.jumbotron {
+  width:90vw;
+  padding: 8rem 4rem;
+  margin-bottom: 15rem;
+  background-color: #e9ecef;
+  border-radius: .3rem;
+}

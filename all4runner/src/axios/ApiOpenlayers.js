@@ -1,10 +1,12 @@
 import axios from 'axios'
-const apiClient = axios.create(
+
+export const apiClient = axios.create(
   {
     baseURL : "http://localhost:7070",
     timeout : 30000
   })
 
+export const JWTAuthenticationApi = (basic64header)=>apiClient.post('/authenticate',{},{headers :{Authorization:basic64header}})
 
 // 경유지포함 좌표를 기반으로 최단경로 도출
 export const retrieveRouteStopOverApi = (httprequestobject)=> apiClient.post(`/retrieveRouteStopOverApi`,httprequestobject)
@@ -25,7 +27,4 @@ export const retrieveRouteApi = (httprequestobject)=> apiClient.post('/retrieveR
 // 경로 생성 후 클릭을 통해 경로 조회 시 사용
 export const retrieveRouteByClick = (httprequestobject)=> apiClient.post('/retrieveRouteByClick',httprequestobject)
 
-// 화장실 벡터 데이터를 도출하는 axios api
-export const retrieveToiletApi = ()=>{
-  apiClient.get('')
-}
+export const createAccountApi = (httprequestobject)=>apiClient.post('/createAccount',httprequestobject)

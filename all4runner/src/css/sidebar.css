@@ -291,9 +291,7 @@ Sidebar
   color: var(--clr-grey-4);
 }
 .social-icons {
-  justify-self: center;
   display: flex;
-  padding-bottom: 2rem;
 }
 .social-icons a {
   font-size: 1.5rem;

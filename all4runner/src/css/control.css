@@ -1,10 +1,5 @@
-.addtoilet {
+.Logout {
   bottom: 20px;
   right: 2em;
-  position: absolute;
-}
-.addborder {
-  bottom: 20px;
-  right:  8em;
   position: absolute;
 }

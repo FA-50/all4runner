@@ -1,7 +1,6 @@
 import React, { useState,useEffect,useRef} from 'react'
 import { FaTimes } from 'react-icons/fa'
 import { useGlobalContext } from '../Context/SidebarContext'
-import { FaHome } from 'react-icons/fa';
 import { Container, Row , Col } from 'react-bootstrap'
 import {Formik , Field , Form } from "formik"
 import {retrieveRouteStopOverApi} from '../axios/ApiOpenlayers'
@@ -15,8 +14,12 @@ import { excludeOpt,AddingJSONLayerToMap,createPoint, deleteAllLayer,drawing, ma
 
 
 import PortalComponent  from '../components/PortalComponent'
+import { useParams } from 'react-router-dom';
 
 const SidebarMap = () => {
+  const {username} = useParams()  
+
+
   // 사이드바를 Context에서 가져옴
   const { isSidebarOpen , closeSidebar } = useGlobalContext()
   // useReducer을 통한 map instance 불러오기
@@ -55,6 +58,7 @@ const SidebarMap = () => {
 
   // Map 초기화
   mapdispatch({type:"getmap"})
+  
 
   // 시점,중간점, 종점을 마우스 클릭하여 경로를 생성하는 콜백함수
   const createRoutebyClick = ({weightslope,checkbox,checkboxdistance})=>{
@@ -251,42 +255,33 @@ const SidebarMap = () => {
         {/* 사이드바 메뉴 */}
         <ul className="links" style={{marginTop:"5px"}}>
         <hr style={{width:"90%"}} />
-        <Container>
-          <Row>
-            <Col xs={9} md={9} lg={9}>
-              <li key={1}>
-                    <a href={"/"} style={{width:"100%"}}>
-                      {<FaHome />}
-                      {"home"}
-                    </a>
-              </li>
-            </Col>
-            <Col xs={3} md={3} lg={3}>
-            <div style={{display: "flex",
-  justifyContent: "spaceBetween",
-  alignItems: "center"}}>
-              <button className="close-btn" onClick={closeSidebar} >
-                < FaTimes />
-              </button>
-            </div>
-            </Col>
-          </Row>
-        </Container>
-          <hr style={{width:"90%"}} />
+        <div className="lead">
+          안녕하세요. {username}님!
+        </div>
+        <hr style={{width:"90%"}} />
           <li>
           <Container>
             <Row>
-              <Col xs={6} md={6} lg={6}>
-              <div className="dropdown">
-                <button className="btn btn-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
-                옵션
-                </button>
-                <ul className="dropdown-menu">
-                  <li><button className="dropdown-item" onClick={()=>{setExploreOption(1)}}>경로계획</button></li>
-                  <li><button className="dropdown-item" onClick={()=>{setExploreOption(2)}}>경로탐색</button></li>
-                  <li><button className="dropdown-item" onClick={()=>{setExploreOption(3)}}>위치검색</button></li>
-                </ul>
-              </div>
+              <Col xs={9} md={9} lg={9}>
+                <div className="dropdown">
+                  <button className="btn btn-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                  옵션
+                  </button>
+                  <ul className="dropdown-menu">
+                    <li><button className="dropdown-item" onClick={()=>{setExploreOption(1)}}>경로계획</button></li>
+                    <li><button className="dropdown-item" onClick={()=>{setExploreOption(2)}}>경로탐색</button></li>
+                    <li><button className="dropdown-item" onClick={()=>{setExploreOption(3)}}>위치검색</button></li>
+                  </ul>
+                </div>
+              </Col>
+              <Col xs={3} md={3} lg={3}>
+                <div style={{display: "flex",
+    justifyContent: "spaceBetween",
+    alignItems: "center"}}>
+                  <button className="close-btn" onClick={closeSidebar} >
+                  < FaTimes />
+                  </button>
+                </div>
               </Col>
             </Row>
           </Container>

@@ -392,7 +392,6 @@ async function createAndLoadRoute(routecnt,targetpointarr,checkbox,startpointcoo
     }catch(error){
       console.log(error)
     }finally{
-      console.log(`${i}번째 경로 생성`)
     }
   }
   // 생성한 경로를 Api를 통해 조회 및 불러와서 Map상에 표현

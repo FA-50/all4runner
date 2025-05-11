@@ -1,58 +1,23 @@
 import {Control} from 'ol/control'
 import "../css/control.css"
 import "bootstrap/dist/css/bootstrap.css"
-import { useMapContext } from '../Context/MapContext'
-
-
 
 // Toilet을 추가하는 Control
-export class AddtoiletControl extends Control{
-  constructor({mapdispatch},opt_options={}) {
+export class LogoutControl extends Control{
+  constructor({AuthContext},opt_options={}) {
+
+
     const options = opt_options || {};
     const button = document.createElement('button');
-    button.innerHTML = '화장실';
+    button.innerHTML = '로그아웃';
     button.className = 'btn btn-dark';
     const element = document.createElement('div');
-    element.className = 'addtoilet'
+    element.className = 'Logout'
     element.appendChild(button);
-    const SetToilet = (mapdispatch)=>{
-      mapdispatch({type:"settoilet"})
-      // if (isActive===false){
-      //   mapdispatch({type:"settoilet"})
-      //   isActive=true
-      //   console.log(isActive)
-      // } else{
-      //   mapdispatch({type:"untoilet"})
-      //   isActive=false
-      //   console.log(isActive)
-      // }
-    }
     super({
       element: element,
       target: options.target,
     });
-    button.addEventListener('click', ()=>{SetToilet(mapdispatch)}, false);
+    button.addEventListener('click', ()=>{AuthContext.Logoutfunction()}, false);
   }
 }
-
-// 경계선을 추가하는 Control
-export class AddBorderline extends Control{
-  constructor({mapdispatch},opt_options={}) {
-    const options = opt_options || {};
-    const button = document.createElement('button');
-    button.innerHTML = '음수대';
-    button.className = 'btn btn-dark';
-    const element = document.createElement('div');
-    element.className = 'addborder'
-    element.appendChild(button);
-    const SetBorder = (mapdispatch)=>{
-      mapdispatch({type:"setborder"})
-    }
-    super({
-      element: element,
-      target: options.target,
-    });
-    button.addEventListener('click', ()=>{ SetBorder(mapdispatch) }, false);
-  }
-}
-

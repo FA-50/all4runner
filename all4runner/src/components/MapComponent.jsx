@@ -6,51 +6,20 @@ import { Tile } from 'ol/layer';
 import { TileWMS, XYZ } from 'ol/source'
 import '../css/all4runner.css'
 import { MapContext } from '../Context/MapContext'
-import { Graticule ,Vector as VectorLayer} from 'ol/layer'
-import {GeoJSON} from 'ol/format'
-import VectorSource from 'ol/source/Vector';
-import { Icon, Style } from 'ol/style';
 import {defaults} from 'ol/control'
-import {AddtoiletControl,AddBorderline} from '../mapcontrol/control'
-import {bbox} from 'ol/loadingstrategy'
-
-import {SetToilet} from '../js/map_control_function'
-
+import {LogoutControl} from '../mapcontrol/control'
+import { ExportContext } from '../Context/AuthContext';
 
 const MapComponent = ({children})=>{
+
+  const AuthContext = ExportContext();
+
   const [map,setMap]= useState(new Map())
   // state update 함수 => map 전달 useReducer 적용용도
   const reducer1 = (state,action)=>{
     switch(action.type){
       case "getmap":
         return map
-      case "settoilet":
-        console.log(map.getLayers().array_.length)
-        const toiletsource = new VectorSource({
-          format : new GeoJSON(),
-          url : 'http://localhost:8080/geoserver/all4runner/ows?service=WFS&version=1.0.0&request=GetFeature&typeName=all4runner%3Adongdaemun_toilet&maxFeatures=50&outputFormat=application%2Fjson',
-          serverType:'geoserver',
-          strategy:bbox,
-        })
-        console.log(toiletsource)
-        const toiletlayer = new VectorLayer({
-          source:toiletsource,
-          zIndex:10,
-          style:new Style({
-            image : new Icon({
-              src: "/img/toilet.png",
-              scale:0.5
-            })
-          })
-        })
-        toiletlayer.setMap(map)
-        map.render()
-        console.log(map.getLayers().array_.length)
-        break;
-      case "untoilet":
-        map.removeLayer(toiletlayer)
-        break;
-
       case "setborder":
         const borderimagesource = new TileWMS({
           url:'http://localhost:8080/geoserver/all4runner/wms',
@@ -79,7 +48,7 @@ const MapComponent = ({children})=>{
   // 구조분해로 받기
   useEffect(() => {
     const Mapinstance = new Map({
-      controls:defaults().extend([new AddtoiletControl({mapdispatch}), new AddBorderline({mapdispatch})]),
+      controls:defaults().extend([new LogoutControl({AuthContext})]),
       target: 'map',  // 하위 요소 중 id 가 map 인 element가 있어야함.
       layers: [
           new Tile({
@@ -95,7 +64,6 @@ const MapComponent = ({children})=>{
       }),
     })
     setMap(Mapinstance)
-    //mapdispatch({type:"settoilet"})
     // useReducer를 통해 동대문구 border 설정
     mapdispatch({type:"setborder"})
     return () => Mapinstance.setTarget(undefined)
