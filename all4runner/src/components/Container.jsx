@@ -6,7 +6,6 @@ import AuthProvider from '../Context/AuthContext'
 import Footer from './Footer';
 import ModifyingMapComponent from './ModifyingMapComponent'
 import MapComponent from './MapComponent'
-import ErrorComponent from './ErrorComponent';
 import { ExportContext } from '../Context/AuthContext';
 
 // 자식Component를 매개변수로 가져오는 Component
@@ -28,7 +27,6 @@ export default function Container(){
         <AuthProvider>
         <BrowserRouter>
           <Routes>
-              <Route path="/" element={<Home/>}/>
               {/* <Route>의 element 속성의 Component를 AuthenticatedRoute Component wrapping하여 자식 Component로 설정. */}
               <Route path="/map/:username" element={
                 <AuthenticatedRoute>
@@ -36,7 +34,7 @@ export default function Container(){
                     <ModifyingMapComponent/>
                   </MapComponent>
                 </AuthenticatedRoute>}/>
-              <Route path="/*" element={<ErrorComponent/>}/>
+              <Route path="/*" element={<Home/>}/>
           </Routes>
           <Footer/>
           </BrowserRouter>
