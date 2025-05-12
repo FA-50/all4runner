@@ -78,6 +78,8 @@ export const createPoint=(coord,opt,mapstate)=>{
           scale: 0.05,
         })
       })
+      break;
+    default:
   }
 
   pointfeature.setStyle(featurestyle)
@@ -401,18 +403,18 @@ export const setDistance = ({distance},SetLimitDistance,startpointcoord,SetTarge
 }
 
 // 거리 설정 완료 후 벡터 생성 Api 전달후 경로를 표현하는 함수
-export const createMultipleRoutes = ({routecnt,slopeopt,checkbox},SetAutoCreateOpt,setLoading,targetpointarr,limitdistance,startpointcoord,SetShowErrorOccured,mapstate,setModalInfo,setShowmodalOpen,reloadRouteByClick,username)=>{
+export const createMultipleRoutes = ({routecnt,slopeopt,checkbox},SetAutoCreateOpt,setLoading,targetpointarr,limitdistance,startpointcoord,SetShowErrorOccured,mapstate,setModalInfo,setShowmodalOpen,reloadRouteByClick,username,setCreatedRouteCnt)=>{
   // 경로생성중 상태 지시
   SetAutoCreateOpt(4)
   setLoading(true)
 
   // 경로 생성 및 최적경로 조회
-  createAndLoadRoute(routecnt,targetpointarr,checkbox,startpointcoord,limitdistance,slopeopt,mapstate,SetShowErrorOccured,SetAutoCreateOpt,setLoading,setModalInfo,setShowmodalOpen,reloadRouteByClick,username)
+  createAndLoadRoute(routecnt,targetpointarr,checkbox,startpointcoord,limitdistance,slopeopt,mapstate,SetShowErrorOccured,SetAutoCreateOpt,setLoading,setModalInfo,setShowmodalOpen,reloadRouteByClick,username,setCreatedRouteCnt)
 
 }
 
 // async await 활용해서 경로가 DB에서 모두 생성된 후 Map상에 한꺼번에 조회되도록 설정.
-async function createAndLoadRoute(routecnt,targetpointarr,checkbox,startpointcoord,limitdistance,slopeopt,mapstate,SetShowErrorOccured,SetAutoCreateOpt,setLoading,setModalInfo,setShowmodalOpen,reloadRouteByClick,username){
+async function createAndLoadRoute(routecnt,targetpointarr,checkbox,startpointcoord,limitdistance,slopeopt,mapstate,SetShowErrorOccured,SetAutoCreateOpt,setLoading,setModalInfo,setShowmodalOpen,reloadRouteByClick,username,setCreatedRouteCnt){
   // 횡단보도, 육교 제외여부
   var excludeoption = excludeOpt(checkbox)
 
@@ -434,6 +436,7 @@ async function createAndLoadRoute(routecnt,targetpointarr,checkbox,startpointcoo
     try{
       const result1 = await createRouteApi(httprequestobject1)
       console.log(result1.data)
+      setCreatedRouteCnt(i)
     }catch(error){
       console.log(error)
     }finally{
@@ -460,6 +463,7 @@ async function createAndLoadRoute(routecnt,targetpointarr,checkbox,startpointcoo
       console.log(error)
     }finally{
       console.log("경로 조회끝")
+      setCreatedRouteCnt(0)
     }
   }
   

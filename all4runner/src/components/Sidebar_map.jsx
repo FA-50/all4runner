@@ -30,6 +30,14 @@ const SidebarMap = () => {
   const [ showguide2, setShowGuide2 ] = useState(false)
   // 로딩 표시 여부
   const [ loading , setLoading ] = useState(false)
+
+  // 경로자동생성일때만 true
+  const [ isAuto , setIsAuto ] = useState(false);
+
+  // 경로 생성 몇개 할건지 지정.
+  const [ routecnt , SetRouteCnt] = useState(0)
+  // 경로 생성 시 몇개가 생성되었는지 count
+  const [ createdroutecnt , setCreatedRouteCnt ] = useState(0)
   // 경로생성 버튼 누를 경우 작동상태 표시여부
   const [ active , setActive ] = useState(false)
   // Draw 거리 정보
@@ -60,7 +68,7 @@ const SidebarMap = () => {
 
   // 시점,중간점, 종점을 마우스 클릭하여 경로를 생성하는 콜백함수
   const createRoutebyClick = ({slopeopt,checkbox})=>{
-
+    setIsAuto(false)
     // 거리제한 없음
     var distanceshort ;
     // draw 기능 작동
@@ -188,7 +196,6 @@ const SidebarMap = () => {
 
   // 해당 함수는 sidebar_map_function.js의 createAndLoadRoute함수에 의해 작동.
   const reloadRouteByClick = (routecnt)=>{
-
     var clickHandler = (evt)=>getFeatureByClick(evt,routecnt)
     // 동기적으로 useRef에 함수를 선언.
     clickHandlerRef.current = clickHandler
@@ -220,6 +227,12 @@ const SidebarMap = () => {
     }
   },[exploreopt,autoCreateOpt,mapstate])
   
+  // 옵션 전환 시 모든 레이어 삭제.
+  useEffect(()=>{
+    if (mapstate){
+    deleteAllLayer(mapstate)
+    }
+  },[exploreopt])
 
   // 산출된 시 , 분 , 초를 배열로 return. 
   const calhms = ()=>{
@@ -359,7 +372,7 @@ const SidebarMap = () => {
             <hr style={{width:"50%"}} />
               { autoCreateOpt === 0 ? 
                 <button type="submit" className="btn btn-primary"
-                onClick={()=>{SetAutoCreateOpt(1);setStartPoint(mapstate,SetShowErrorOccured,SetStartPointCoord,SetAutoCreateOpt,username)}}>
+                onClick={()=>{setIsAuto(true);SetAutoCreateOpt(1);setStartPoint(mapstate,SetShowErrorOccured,SetStartPointCoord,SetAutoCreateOpt,username)}}>
                   시작점 지정
                 </button>
               : 
@@ -396,7 +409,9 @@ const SidebarMap = () => {
               { autoCreateOpt===3 ? 
                 <Formik initialValues={{ routecnt:1,slopeopt:1,checkbox :[]}}
                 enableReinitialize={true}
-                onSubmit={(value)=>{createMultipleRoutes(value,SetAutoCreateOpt,setLoading,targetpointarr,limitdistance,startpointcoord,SetShowErrorOccured,mapstate,setModalInfo,setShowmodalOpen,reloadRouteByClick,username)}}>
+                onSubmit={(value)=>{
+                  SetRouteCnt(value.routecnt)
+                  ;createMultipleRoutes(value,SetAutoCreateOpt,setLoading,targetpointarr,limitdistance,startpointcoord,SetShowErrorOccured,mapstate,setModalInfo,setShowmodalOpen,reloadRouteByClick,username,setCreatedRouteCnt)}}>
                   {
                     (props)=>(
                       <Form className="container-fluid">
@@ -465,9 +480,22 @@ const SidebarMap = () => {
           : <div/>}
           <li>
             { loading ?
-              <div className="spinner-border" role="status" style={{marginLeft:30}}>
-                <span className="visually-hidden">Loading...</span>
-              </div> : <div/>
+            <div>
+              <Container>
+                <Row>
+                  { isAuto? 
+                    <Col xs={3} md={3} lg={3} className="lead">
+                      {createdroutecnt} / {routecnt} 
+                    </Col>
+                  : <></> }
+                  <Col xs={3} md={3} lg={3}>
+                    <div className="spinner-border" role="status" style={{marginLeft:30}}>
+                      <span className="visually-hidden">Loading...</span>
+                    </div>
+                  </Col>
+                </Row>
+              </Container>
+            </div> : <div/>
             }
           </li>
         </ul>
