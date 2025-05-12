@@ -122,7 +122,6 @@ export const MakeFeatureFromJSON = (jsonarr,mapstate) =>{
     } catch{
       drawSelectColorOption=1
     }
-
     if (i===0){
       prelinktype[i]="일반"
     }
@@ -292,7 +291,10 @@ export const createRouteOnMap = (jsonarr,mapstate,SetShowErrorOccured,SetAutoCre
     crosswalkcnt:countarr[0],
     bridgecnt:countarr[1],
     toiletcnt:countarr[2],
-    drinkcnt:countarr[3]
+    drinkcnt:countarr[3],
+    totkcal:countarr[4],
+    avgslope:countarr[5],
+    totruntime:countarr[6]
   }
 }
 
@@ -399,18 +401,18 @@ export const setDistance = ({distance},SetLimitDistance,startpointcoord,SetTarge
 }
 
 // 거리 설정 완료 후 벡터 생성 Api 전달후 경로를 표현하는 함수
-export const createMultipleRoutes = ({routecnt,weightslope,checkbox},SetAutoCreateOpt,setLoading,targetpointarr,limitdistance,startpointcoord,SetShowErrorOccured,mapstate,setModalInfo,setShowmodalOpen,reloadRouteByClick)=>{
+export const createMultipleRoutes = ({routecnt,slopeopt,checkbox},SetAutoCreateOpt,setLoading,targetpointarr,limitdistance,startpointcoord,SetShowErrorOccured,mapstate,setModalInfo,setShowmodalOpen,reloadRouteByClick,username)=>{
   // 경로생성중 상태 지시
   SetAutoCreateOpt(4)
   setLoading(true)
 
   // 경로 생성 및 최적경로 조회
-  createAndLoadRoute(routecnt,targetpointarr,checkbox,startpointcoord,limitdistance,weightslope,mapstate,SetShowErrorOccured,SetAutoCreateOpt,setLoading,setModalInfo,setShowmodalOpen,reloadRouteByClick)
+  createAndLoadRoute(routecnt,targetpointarr,checkbox,startpointcoord,limitdistance,slopeopt,mapstate,SetShowErrorOccured,SetAutoCreateOpt,setLoading,setModalInfo,setShowmodalOpen,reloadRouteByClick,username)
 
 }
 
 // async await 활용해서 경로가 DB에서 모두 생성된 후 Map상에 한꺼번에 조회되도록 설정.
-async function createAndLoadRoute(routecnt,targetpointarr,checkbox,startpointcoord,limitdistance,weightslope,mapstate,SetShowErrorOccured,SetAutoCreateOpt,setLoading,setModalInfo,setShowmodalOpen,reloadRouteByClick){
+async function createAndLoadRoute(routecnt,targetpointarr,checkbox,startpointcoord,limitdistance,slopeopt,mapstate,SetShowErrorOccured,SetAutoCreateOpt,setLoading,setModalInfo,setShowmodalOpen,reloadRouteByClick,username){
   // 횡단보도, 육교 제외여부
   var excludeoption = excludeOpt(checkbox)
 
@@ -424,7 +426,8 @@ async function createAndLoadRoute(routecnt,targetpointarr,checkbox,startpointcoo
       distance:limitdistance,
       targetnodeid : randomnodeid,
       excludeoption : excludeoption,
-      weightslope:weightslope,
+      slopeopt:slopeopt,
+      username:username,
       iter:i
     }
         // 경로생성 API 전달
@@ -438,8 +441,11 @@ async function createAndLoadRoute(routecnt,targetpointarr,checkbox,startpointcoo
   }
   // 생성한 경로를 Api를 통해 조회 및 불러와서 Map상에 표현
   for (let i=1; i<=routecnt ; i++){
-    var tablenm = "linknum"+i
-    const httprequestobject2 = { tablenm : tablenm }
+    var tablenm = "linknum"+i+`_${username}`    
+    const httprequestobject2 = { 
+        tablenm : tablenm,
+        username : username
+    }
     // 생성한 경로 선택해서 가져오기
     try{
       const result2 = await retrieveRouteApi(httprequestobject2)
@@ -463,14 +469,14 @@ async function createAndLoadRoute(routecnt,targetpointarr,checkbox,startpointcoo
 }
 
 // 생성된 경로클릭 시 클릭된 경로의 이름을 기반으로 경로 조회 후 기존 경로 하나 삭제 후 하나 경로 재생성하는 과정 반복하여 경로 재생성.
-export const retrieveClickedRoute = (clickedLinkName,routecnt,mapstate,SetShowErrorOccured,SetAutoCreateOpt,setLoading,setModalInfo,setShowmodalOpen)=>{
+export const retrieveClickedRoute = (username,clickedLinkName,routecnt,mapstate,SetShowErrorOccured,SetAutoCreateOpt,setLoading,setModalInfo,setShowmodalOpen)=>{
 
+  // 지도 상 모든 벡터레이어 삭제
+  deleteAllLayer(mapstate)
+  
   for(let i=1 ; i <= routecnt; i++){
-    // 0번째 : tile map layer 1번째 : point vector layer 
-    // 2번째에 해당하는 기존 생성된 경로 layer를 하나 삭제 후 새로운 경로 하나 생성하면서 반복.
-    mapstate.removeLayer(mapstate.getLayers().getArray()[2])
 
-    var tablenm = "linknum"+i;
+    var tablenm = "linknum"+i+`_${username}`;
     const httprequestobject3 = { tablenm : tablenm, 
       clickedtablenm :  clickedLinkName };
     // 경로생성 Api 전달

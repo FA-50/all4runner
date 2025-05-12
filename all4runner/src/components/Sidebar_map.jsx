@@ -394,9 +394,9 @@ const SidebarMap = () => {
                   }
               </Formik> : <></> }
               { autoCreateOpt===3 ? 
-                <Formik initialValues={{ routecnt:1,weightslope:0,checkbox :[]}}
+                <Formik initialValues={{ routecnt:1,slopeopt:1,checkbox :[]}}
                 enableReinitialize={true}
-                onSubmit={(value)=>{createMultipleRoutes(value,SetAutoCreateOpt,setLoading,targetpointarr,limitdistance,startpointcoord,SetShowErrorOccured,mapstate,setModalInfo,setShowmodalOpen,reloadRouteByClick)}}>
+                onSubmit={(value)=>{createMultipleRoutes(value,SetAutoCreateOpt,setLoading,targetpointarr,limitdistance,startpointcoord,SetShowErrorOccured,mapstate,setModalInfo,setShowmodalOpen,reloadRouteByClick,username)}}>
                   {
                     (props)=>(
                       <Form className="container-fluid">
@@ -413,9 +413,17 @@ const SidebarMap = () => {
                             <Row style={{marginTop:10}}>
                               <hr style={{width:"90%"}} />
                               <fieldset className="form-group">
-                                <label htmlFor="weightslopeid" className="form-label">경사도 가중치</label>
-                                <Field type="range" name="weightslope" className="form-range" min="0" max="100" step="20" id="weightslopeid" style={{width:"90%"}}/>
+                                <label htmlFor="slopeid" className="form-label">경사 필터</label>
+                                <Field type="range" name="slopeopt" className="form-range" min="1" max="20" step="1" id="slopeid" style={{width:"90%"}}/>
                               </fieldset>
+                            </Row>
+                            <Row style={{marginRight:"7px"}}>
+                              <Col xs={2} md={2} lg={2}>1%</Col>
+                              <Col xs={2} md={2} lg={2}>5%</Col>
+                              <Col xs={2} md={2} lg={2}>9%</Col>
+                              <Col xs={2} md={2} lg={2}>13%</Col>
+                              <Col xs={2} md={2} lg={2}>17%</Col>
+                              <Col xs={2} md={2} lg={2}>20%</Col>
                             </Row>
                             <Row style={{marginTop:5}}>
                               <hr style={{width:"90%"}} />
