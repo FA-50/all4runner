@@ -6,6 +6,7 @@ export const apiClient = axios.create(
     timeout : 30000
   })
 
+  // base64 방식으로 ID와 PW를 전달하여 검증 후 생성된 JWT Token을 return.
 export const JWTAuthenticationApi = (basic64header)=>apiClient.post('/authenticate',{},{headers :{Authorization:basic64header}})
 
 // 경유지포함 좌표를 기반으로 최단경로 도출
@@ -16,7 +17,7 @@ export const retrievePointByDistanceApi = (httprequestobject)=>
   apiClient.post('/getnodeid',httprequestobject)
 
 // 최적 복수 경로 생성 전 DB Table 초기화.
-export const initDBRouteTableApi = ()=> apiClient.delete('/initDBroute')
+export const initDBRouteTableApi = (username)=> apiClient.delete(`/initDBroute/${username}`)
 
 // 시작점좌표와 목표노드 id 및 옵션을 전달받아 경로 생성
 export const createRouteApi = (httprequestobject)=> apiClient.post('/createRoute' , httprequestobject)

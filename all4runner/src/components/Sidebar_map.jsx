@@ -12,13 +12,11 @@ import { transform  } from 'ol/proj'
 import { excludeOpt,AddingJSONLayerToMap,createPoint, deleteAllLayer,drawing, makingHttpRequestBody,setStartPoint,setDistance, createMultipleRoutes,retrieveClickedRoute} from '../js/sidebar_map_function'
 
 
-
 import PortalComponent  from '../components/PortalComponent'
 import { useParams } from 'react-router-dom';
 
 const SidebarMap = () => {
   const {username} = useParams()  
-
 
   // 사이드바를 Context에서 가져옴
   const { isSidebarOpen , closeSidebar } = useGlobalContext()
@@ -41,7 +39,7 @@ const SidebarMap = () => {
   
 
   // Modal에 지시할 정보의 초기값 정의
-  const [modalinfo,setModalInfo] = useState({totdistance:0,crosswalkcnt:0,bridgecnt:0,tunnelcnt:0,drinkcnt:0,toiletcnt:0});
+  const [modalinfo,setModalInfo] = useState({totdistance:0,crosswalkcnt:0,bridgecnt:0,tunnelcnt:0,drinkcnt:0,toiletcnt:0,totkcal:0,avgslope:0,totruntime:0});
 
 
   // 최적경로자동생성 조작 Process 옵션
@@ -61,7 +59,7 @@ const SidebarMap = () => {
   
 
   // 시점,중간점, 종점을 마우스 클릭하여 경로를 생성하는 콜백함수
-  const createRoutebyClick = ({weightslope,checkbox,checkboxdistance})=>{
+  const createRoutebyClick = ({slopeopt,checkbox})=>{
 
     // 거리제한 없음
     var distanceshort ;
@@ -91,21 +89,12 @@ const SidebarMap = () => {
         // getLength : ol / sphere
         var initdistance = getLength(geom3857); // 단위: 미터
 
-        // 거리제한 설정 여부
-        if (checkboxdistance.length===0){
-          // 체크박스 체크 안하면 거리제한 없음
-          distanceshort= 99999999999;
-        }else{
-          // 체크 시 draw 거리를 한정해서 거리제한.
-          distanceshort=initdistance;
-        }
+        distanceshort= 99999999999;
 
         // // 거리표현
         setDrawdistance(Math.round(initdistance));
       })
     })
-
-    
     // 경로생성 버튼 숨김
     setActive(true)
     // 점 클릭 메시지 지시
@@ -151,7 +140,7 @@ const SidebarMap = () => {
 
         // , 로 구분되는 위도 , 경도 좌표의 문자열을 생성하여
         // Spring에서 @RequestBody로 받을 Object 객체 정의하는 function
-        const coorddistanceobject = makingHttpRequestBody(weightslope,totalpointcount,coordarr,distanceshort,excludeoption)
+        const coorddistanceobject = makingHttpRequestBody(slopeopt,totalpointcount,coordarr,distanceshort,excludeoption,username)
 
         // 로딩 표현
         setLoading(true)
@@ -162,11 +151,12 @@ const SidebarMap = () => {
         // 경로 생성을 위한 API 호출 
         retrieveRouteStopOverApi(coorddistanceobject)
         .then((result)=>{
+          console.log(result)
           if (result.data.length > 0){
             // Map상에 link 생성 후 link 정보 반환.
             setModalInfo(AddingJSONLayerToMap(result.data,firstlastpoints,mapstate,setShowGuide2,setLoading,setActive,setShowmodalOpen))
           }else{
-            setModalInfo({totdistance:0,crosswalkcnt:0,bridgecnt:0,tunnelcnt:0,drinkcnt:0,toiletcnt:0})
+            setModalInfo({totdistance:0,crosswalkcnt:0,bridgecnt:0,tunnelcnt:0,drinkcnt:0,toiletcnt:0,totkcal:0,avgslope:0,totruntime:0})
             setShowGuide2(true)
             setLoading(false)
             setActive(false)
@@ -217,7 +207,7 @@ const SidebarMap = () => {
     // 생성된 경로 클릭 시
     if (clickedLinkName){
       // 경로 조회 후 생성 함수 실행
-      retrieveClickedRoute(clickedLinkName,routecnt,mapstate,SetShowErrorOccured,SetAutoCreateOpt,setLoading,setModalInfo,setShowmodalOpen)
+      retrieveClickedRoute(username,clickedLinkName,routecnt,mapstate,SetShowErrorOccured,SetAutoCreateOpt,setLoading,setModalInfo,setShowmodalOpen)
     }else{
       console.log("클릭된 벡터 없음")
     }
@@ -231,6 +221,17 @@ const SidebarMap = () => {
   },[exploreopt,autoCreateOpt,mapstate])
   
 
+  // 산출된 시 , 분 , 초를 배열로 return. 
+  const calhms = ()=>{
+    let totruntime = modalinfo.totruntime
+    let hour = Math.floor(totruntime/3600)
+    let min = Math.floor(Math.round(totruntime/60) - Math.floor(totruntime/3600)*60)
+    let sec = Math.floor(totruntime)-(Math.floor(Math.floor(totruntime/60) - Math.floor(totruntime/3600)*60))*60- Math.floor(totruntime/3600)*3600
+    return [hour,min,sec]
+  }
+
+
+
   return (
     <>
     {/* ReactDOM.createPortal을 이용해 경로정보표현 */ }
@@ -243,7 +244,10 @@ const SidebarMap = () => {
               </Row>
             </Container>
           <div className="card-body">
-            <p className="card-text" style={{margin:"2px"}}>총거리 : {Math.round(modalinfo.totdistance)}m</p>
+            <p className="card-text" style={{margin:"2px"}}>총거리 : {Math.round(modalinfo.totdistance*10)/10}m</p>
+            <p className="card-text" style={{margin:"2px"}}>소모 칼로리 : {Math.round(modalinfo.totkcal*10)/10} kcal</p>
+            <p className="card-text" style={{margin:"2px"}}>평균 경사도 : {Math.round(modalinfo.avgslope*10)/10} %</p>
+            <p className="card-text" style={{margin:"2px"}}>소요시간 : {calhms()[0]}시 {calhms()[1]}분 {calhms()[2]}초</p>
             <p className="card-text" style={{margin:"2px"}}>횡단보도 수 : {modalinfo.crosswalkcnt}</p>
             <p className="card-text" style={{margin:"2px"}}>육교, 다리 수 : {modalinfo.bridgecnt}</p>
             <p className="card-text" style={{margin:"2px"}}>인접화장실 수 : {modalinfo.toiletcnt}</p>
@@ -292,7 +296,7 @@ const SidebarMap = () => {
             <h3>최적경로계획</h3>
             <hr style={{width:"50%"}} />
               {
-                <Formik initialValues={{ weightslope:0,checkbox :  [],checkboxdistance:[]}}
+                <Formik initialValues={{ slopeopt:1,checkbox :  []}}
                 enableReinitialize={true}
                 onSubmit={(value)=>{createRoutebyClick(value)}}>
                   {
@@ -301,9 +305,17 @@ const SidebarMap = () => {
                           <Container>
                             <Row>
                               <fieldset className="form-group">
-                                <label htmlFor="weightslopeid" className="form-label">경사도 가중치</label>
-                                <Field type="range" name="weightslope" className="form-range" min="0" max="100" step="20" id="weightslopeid" style={{width:"90%"}}/>
+                                <label htmlFor="slopeid" className="form-label">경사 필터</label>
+                                <Field type="range" name="slopeopt" className="form-range" min="1" max="20" step="1" id="slopeid" style={{width:"90%"}}/>
                               </fieldset>
+                            </Row>
+                            <Row style={{marginRight:"7px"}}>
+                              <Col xs={2} md={2} lg={2}>1%</Col>
+                              <Col xs={2} md={2} lg={2}>5%</Col>
+                              <Col xs={2} md={2} lg={2}>9%</Col>
+                              <Col xs={2} md={2} lg={2}>13%</Col>
+                              <Col xs={2} md={2} lg={2}>17%</Col>
+                              <Col xs={2} md={2} lg={2}>20%</Col>
                             </Row>
                             <Row>
                               <fieldset className="form-group">
@@ -320,17 +332,10 @@ const SidebarMap = () => {
                             </Row>
                             <Row style={{marginTop:10}}>
                             <hr style={{width:"90%"}} />
-                              <fieldset className="form-group">
-                                <div className="form-check form-check-inline">
-                                      <Field className="form-check-input" type="checkbox" value={"distancelimitactive"} name="checkboxdistance" id="distancelimitid"/>
-                                      <label className="form-check-label" htmlFor="distancelimitid">거리제한 시 체크</label>
-                                </div>
-                                <hr style={{width:"90%"}} />
-                              </fieldset>
                               <Col xs={12} md={12} lg={12}>
                                 { active ? 
                                 <div className="alert alert-light" role="alert" style={{width:"90%",marginTop:10}}>
-                                최소거리 : {drawdistance} m
+                                직선거리 : {drawdistance} m
                                 </div>
                                 :
                                 <button type="submit" className="btn btn-primary" style={{marginTop:10}}>경로생성</button> 
@@ -354,7 +359,7 @@ const SidebarMap = () => {
             <hr style={{width:"50%"}} />
               { autoCreateOpt === 0 ? 
                 <button type="submit" className="btn btn-primary"
-                onClick={()=>{SetAutoCreateOpt(1);setStartPoint(mapstate,SetShowErrorOccured,SetStartPointCoord,SetAutoCreateOpt)}}>
+                onClick={()=>{SetAutoCreateOpt(1);setStartPoint(mapstate,SetShowErrorOccured,SetStartPointCoord,SetAutoCreateOpt,username)}}>
                   시작점 지정
                 </button>
               : 

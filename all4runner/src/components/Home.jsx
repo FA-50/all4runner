@@ -13,6 +13,7 @@ const Home = () =>{
   const [ showLoginSuccess, setShowLoginSuccess] = useState(true);
   // 회원가입 성공여부
   const [ showSignUpSuccess, setshowSignUpSuccess] = useState(false);
+  const [ showSignUpFail , setshowSignUpFail] = useState(false);
 
   const AuthContext = ExportContext();
 
@@ -45,7 +46,7 @@ const Home = () =>{
     return errors;
   }
 
-  // 계정생성성
+  // 계정생성
   const createAccount=({userid2,userpw2,avgspeed,maxspeed,userweight})=>{
     const HttpRequestBody={
       username:userid2,
@@ -58,9 +59,12 @@ const Home = () =>{
     .then((result)=>{
       console.log(result)
       setshowSignUpSuccess(true)
+      setshowSignUpFail(false)
     })
     .catch((error)=>{
       console.log(error);
+      setshowSignUpFail(true)
+      setshowSignUpSuccess(false)
     })
     .finally(console.log("계정작업끝"))
   }
@@ -207,6 +211,7 @@ const Home = () =>{
                           </Col>
                         </Row>
                         {showSignUpSuccess && <div className="lead">회원가입 성공</div>}
+                        {showSignUpFail && <div className="lead">이미 존재하는 계정명입니다.</div>}
                         <ErrorMessage
                         name = "userid2"
                         component = "div"
