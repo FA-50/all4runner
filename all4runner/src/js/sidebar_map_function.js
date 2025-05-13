@@ -173,7 +173,7 @@ export const MakeFeatureFromJSON = (jsonarr,mapstate) =>{
           innerlinestyle = new Style({ stroke : new Stroke({color :'#D2691E',width : 6}),zIndex:15})
         }else if(toiletlat!==0){
           // 화장실에 해당하는 경우 
-          innerlinestyle = new Style({ stroke : new Stroke({color :'#FF7F50',width : 6}),zIndex:16})
+          innerlinestyle = new Style({ stroke : new Stroke({color :'#008000',width : 6}),zIndex:16})
           prelinktype[i]="화장실"
           if(prelinktype[i-1]!=="화장실"){ 
             toiletcnt++

@@ -256,16 +256,44 @@ const SidebarMap = () => {
                 <Col xs={2} md={2} lg={2}><button className="closemodal" onClick={()=>{setShowmodalOpen(false)}}><FaTimes/></button></Col>
               </Row>
             </Container>
-          <div className="card-body">
-            <p className="card-text" style={{margin:"2px"}}>총거리 : {Math.round(modalinfo.totdistance*10)/10}m</p>
-            <p className="card-text" style={{margin:"2px"}}>소모 칼로리 : {Math.round(modalinfo.totkcal*10)/10} kcal</p>
-            <p className="card-text" style={{margin:"2px"}}>평균 경사도 : {Math.round(modalinfo.avgslope*10)/10} %</p>
-            <p className="card-text" style={{margin:"2px"}}>소요시간 : {calhms()[0]}시 {calhms()[1]}분 {calhms()[2]}초</p>
-            <p className="card-text" style={{margin:"2px"}}>횡단보도 수 : {modalinfo.crosswalkcnt}</p>
-            <p className="card-text" style={{margin:"2px"}}>육교, 다리 수 : {modalinfo.bridgecnt}</p>
-            <p className="card-text" style={{margin:"2px"}}>인접화장실 수 : {modalinfo.toiletcnt}</p>
-            <p className="card-text" style={{margin:"2px"}}>인접급수대 수 : {modalinfo.drinkcnt}</p>
-          </div>
+            <Container className="card-body">
+              <p className="card-text" style={{margin:"2px"}}>총거리 : {Math.round(modalinfo.totdistance*10)/10}m</p>
+              <p className="card-text" style={{margin:"2px"}}>소모 칼로리 : {Math.round(modalinfo.totkcal*10)/10} kcal</p>
+              <p className="card-text" style={{margin:"2px"}}>평균 경사도 : {Math.round(modalinfo.avgslope*10)/10} %</p>
+              <p className="card-text" style={{margin:"2px"}}>소요시간 : {calhms()[0]}시 {calhms()[1]}분 {calhms()[2]}초</p>
+              <Row>
+                <Col xs={1} md={1} lg={1}>
+                  <img src={"../img/red.png"} width="10" height="auto" alt="red"/>
+                </Col>
+                <Col>
+                  <p className="card-text" style={{margin:"2px"}}>횡단보도 수 : {modalinfo.crosswalkcnt}</p>
+                </Col>
+              </Row>
+              <Row>
+                <Col xs={1} md={1} lg={1}>
+                  <img src={"../img/orange.png"} width="10" height="auto" alt="red"/>
+                </Col>
+                <Col>
+                  <p className="card-text" style={{margin:"2px"}}>육교, 다리 수 : {modalinfo.bridgecnt}</p>
+                </Col>
+              </Row>
+              <Row>
+                <Col xs={1} md={1} lg={1}>
+                  <img src={"../img/green.png"} width="10" height="auto" alt="red"/>
+                </Col>
+                <Col>
+                  <p className="card-text" style={{margin:"2px"}}>인접화장실 수 : {modalinfo.toiletcnt}</p>
+                </Col>
+              </Row>
+              <Row>
+                <Col xs={1} md={1} lg={1}>
+                  <img src={"../img/blue.png"} width="10" height="auto" alt="red"/>
+                </Col>
+                <Col>
+                  <p className="card-text" style={{margin:"2px"}}>인접급수대 수 : {modalinfo.drinkcnt}</p>
+                </Col>
+              </Row>
+            </Container>
         </div>
       </PortalComponent>
       <aside className={`${isSidebarOpen? 'sidebar show-sidebar':'sidebar'}`}>
