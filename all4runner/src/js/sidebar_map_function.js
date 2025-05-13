@@ -194,6 +194,20 @@ export const MakeFeatureFromJSON = (jsonarr,mapstate) =>{
           innerlinestyle = new Style({ stroke : new Stroke({color :'#708090',width : 6}),zIndex:9})
           prelinktype[i]="일반"
         };
+
+        // 시작점 & 끝점 flag 지정.
+        let jsonString = geojson
+        // JSON 문자열을 객체로 변환
+        let obj = JSON.parse(jsonString);
+
+        if (i===0){
+          // 배열의 첫 번째 좌표만 추출하여 시작 point 생성
+          createPoint(obj.coordinates[0][0],3,mapstate);
+        } else if ( i===jsonarr.length-1){
+          let last1 = obj.coordinates[obj.coordinates.length-1]
+          let last2 = last1[last1.length-1]
+          createPoint(last2,3,mapstate)
+        }
       }
     geojsonfeature.setStyle([outerlinestyle,innerlinestyle])
     featurearr[i++]= geojsonfeature
@@ -205,7 +219,7 @@ export const MakeFeatureFromJSON = (jsonarr,mapstate) =>{
 
 
 // 경로 한개 선택 시 json 배열을 입력받아서 경로생성
-export const AddingJSONLayerToMap = ( jsonarr , firstlastpoints, mapstate,setShowGuide2,setLoading,setActive, setShowmodalOpen)=>{
+export const AddingJSONLayerToMap = ( jsonarr , mapstate,setShowGuide2,setLoading,setActive, setShowmodalOpen)=>{
   if (jsonarr.length===0){
     setShowGuide2(true)
     deleteAllLayer(mapstate)
@@ -233,8 +247,6 @@ export const AddingJSONLayerToMap = ( jsonarr , firstlastpoints, mapstate,setSho
     mapstate.addLayer(jsonvectorlayer1)
     // Vector Layer 생성 시 Vector Source의 geom 범위로 Viewport의 확대를 수행
     mapstate.getView().fit(jsonvectorsource1.getExtent(),{duration:500})
-    createPoint(firstlastpoints[0],3,mapstate)
-    createPoint(firstlastpoints[1],3,mapstate)
     mapstate.render()
     // 로딩창종료
     setLoading(false)

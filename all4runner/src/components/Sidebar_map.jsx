@@ -117,7 +117,6 @@ const SidebarMap = () => {
     var clickend = false
     var coordarr = []
     var iter=0    
-    var firstlastpoints;
 
     // 클릭이벤트로로 얻는 좌표를 배열로 넣는 콜백함수
     const addcoord = (evt) => {
@@ -142,9 +141,7 @@ const SidebarMap = () => {
 
         // 포인트 총 갯수
         var totalpointcount = coordarr.length;
-        
-        // 시작점 끝점 아이콘 지정용
-        firstlastpoints = [coordarr[0],coordarr[totalpointcount-1]]
+      
 
         // , 로 구분되는 위도 , 경도 좌표의 문자열을 생성하여
         // Spring에서 @RequestBody로 받을 Object 객체 정의하는 function
@@ -159,10 +156,9 @@ const SidebarMap = () => {
         // 경로 생성을 위한 API 호출 
         retrieveRouteStopOverApi(coorddistanceobject)
         .then((result)=>{
-          console.log(result)
           if (result.data.length > 0){
             // Map상에 link 생성 후 link 정보 반환.
-            setModalInfo(AddingJSONLayerToMap(result.data,firstlastpoints,mapstate,setShowGuide2,setLoading,setActive,setShowmodalOpen))
+            setModalInfo(AddingJSONLayerToMap(result.data,mapstate,setShowGuide2,setLoading,setActive,setShowmodalOpen))
           }else{
             setModalInfo({totdistance:0,crosswalkcnt:0,bridgecnt:0,tunnelcnt:0,drinkcnt:0,toiletcnt:0,totkcal:0,avgslope:0,totruntime:0})
             setShowGuide2(true)
