@@ -11,9 +11,11 @@ import { getLength } from 'ol/sphere';
 import { transform  } from 'ol/proj'
 import { excludeOpt,AddingJSONLayerToMap,createPoint, deleteAllLayer,drawing, makingHttpRequestBody,setStartPoint,setDistance, createMultipleRoutes,retrieveClickedRoute} from '../js/sidebar_map_function'
 
+import $ from 'jquery'
 
 import PortalComponent  from '../components/PortalComponent'
 import { useParams } from 'react-router-dom';
+import { TiHeadphones } from 'react-icons/ti'
 
 const SidebarMap = () => {
   const {username} = useParams()  
@@ -223,12 +225,6 @@ const SidebarMap = () => {
     }
   },[exploreopt,autoCreateOpt,mapstate])
   
-  // 옵션 전환 시 모든 레이어 삭제.
-  useEffect(()=>{
-    if (mapstate){
-    deleteAllLayer(mapstate)
-    }
-  },[exploreopt])
 
   // 산출된 시 , 분 , 초를 배열로 return. 
   const calhms = ()=>{
@@ -240,6 +236,64 @@ const SidebarMap = () => {
   }
 
 
+
+// 검색 시 page 번호
+const [ pagenum , setPageNum ]= useState(1); 
+
+// 검색결과 표시
+const [ showSearchResult,setShowSearchResult] = useState(false);
+
+
+const [ storedResult, setStoredResult ] = useState([])
+
+  // Vworld 검색엔진을 사용하여 검색
+const searchByVworld = ({searchvalue}) =>{
+
+  setStoredResult([]);
+  setShowSearchResult(false);
+
+  var keyword = searchvalue;
+  var params = {
+    service : "search",
+    request : "search",
+    version : "2.0",
+    crs : "EPSG:4326",
+    // 4326 기준 서울시 범위
+    bbox : "126.7644,37.4133,127.1831,37.7151",
+    size : 5 , 
+    page : pagenum,
+    query : keyword,
+    type : 'PLACE',
+    format : 'json',
+    errorformat : "json",
+    key : "97CA68E3-121B-39B9-AD1B-2D0C8E54E461"
+  }
+
+  $.ajax({
+    type: 'GET',
+    url : "http://api.vworld.kr/req/search",
+    dataType : 'JSONP',
+    data : params ,
+    success : (data)=>{
+      showResults(data.response)
+    },
+    error : (jqXHR, textStatus, errorThrown)=>{
+      console.error("요청 실패:", textStatus, errorThrown);
+      alert("데이터를 불러오지 못했습니다. 다시 시도해주세요.");
+    }
+  })
+}
+
+// Ajax 실행 후
+const showResults = (response)=>{
+  if ( response.status === "OK" ){
+    setStoredResult(response.result.items);
+    setShowSearchResult(true)
+  }else{
+    console.log("조회 실패.")
+    setShowSearchResult(false)
+  }
+}
 
   return (
     <>
@@ -498,9 +552,64 @@ const SidebarMap = () => {
               </div> : <></> }
           </li>
           : <div/>}
+          {/* 검색의 경우 */}
           { exploreopt === 3 ?
-          <li>
-          </li>
+          <Formik
+            initialValues={{searchvalue:""}}
+            enableReinitialize={true}
+            onSubmit={(value)=>{searchByVworld(value,mapstate,pagenum , setPageNum)}}>
+                  {
+                    (props)=>(
+                      <Form className="d-flex" role="search" style={{width:"40vh"}}>
+                        <Container>
+                          <Row>
+                            <h3>장소검색</h3>
+                            <hr style={{width:"50%", marginTop:"3px"}} />
+                          </Row>
+                          <Row>
+                            <Col xs={8} md={8} lg={8}>
+                              <Field className="form-control me-2" type="search" name="searchvalue" placeholder="Search" aria-label="Search" style={{marginTop:"8px"}}/>
+                            </Col>
+                            <Col xs={4} md={4} lg={4}>
+                              <button className="btn btn-outline-success" type="submit">Search</button>
+                            </Col>
+                          </Row>
+                          <Row>
+                            <Col xs={6} md={6} lg={6}>
+                              <button className="btn btn-primary" onClick={()=>deleteAllLayer(mapstate)} style={{marginTop:10}}>아이콘 삭제</button>
+                            </Col>
+                          </Row>
+                        <hr style={{width:"100%"}} />
+                          {/* 검색결과 */}
+                          <div className="list-group" id="searchResult">
+                            {showSearchResult? 
+
+                              storedResult.map((item,i)=>{
+                                let coordarr = [item.point.x,item.point.y]
+                                return (<button key={i} type="button" className="list-group-item list-group-item-action" onClick={()=>createPoint(coordarr,4,mapstate)}>
+                                  <div className="ms-2 me-auto">
+                                    <div className="fw-bold">{item.title}</div>
+                                    {item.address.road}
+                                  </div>
+                                </button>)
+                              })
+
+                            :
+                            
+                            <button type="button" className="list-group-item list-group-item-action">
+                                  <div className="ms-2 me-auto">
+                                    <div className="fw-bold">검색결과 없음</div>
+                                  </div>
+                                </button>
+                            
+                            }
+                          </div>
+                        <hr style={{width:"100%"}} />
+                        </Container>       
+                      </Form>
+                    )
+                  }
+          </Formik>
           : <div/>}
           <li>
             { loading ?

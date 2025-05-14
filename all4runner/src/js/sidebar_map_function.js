@@ -6,6 +6,8 @@ import {Feature} from 'ol'
 import { GeoJSON } from 'ol/format';
 import { retrievePointByDistanceApi, createRouteApi , retrieveRouteApi,initDBRouteTableApi,retrieveRouteByClick} from '../axios/ApiOpenlayers'
 
+
+
  // draw 기능에 필요한 draw vector source를 제공하는 함수
 export const drawing = (mapstate)=>{
   // drawing vector의 초기 배열 정의
@@ -79,6 +81,14 @@ export const createPoint=(coord,opt,mapstate)=>{
         })
       })
       break;
+    case 4:
+      featurestyle = new Style({
+        image: new Icon({
+          anchor: [0.2, 1.1],
+          src: '/img/searchResult.png', // 아이콘 이미지 URL
+          scale: 0.05,
+        })})
+        break;
     default:
   }
 
@@ -90,8 +100,15 @@ export const createPoint=(coord,opt,mapstate)=>{
     source : pointvectorsource,
     zIndex : 101
   })
+  
   mapstate.addLayer(pointvectorlayer)
   mapstate.render()
+
+  // 검색해서 얻은 경우
+  let extent = pointvectorsource.getExtent()
+  if (opt===4){
+    mapstate.getView().fit(extent,{ duration:500 , maxZoom:16 })
+  }
 }
 
 // 각 행의 json 데이터를 각각의 feature 데이터로 생성하여 Feature 배열로 반환하는 함수
@@ -369,8 +386,7 @@ export const setStartPoint = (mapstate,SetShowErrorOccured,SetStartPointCoord,Se
   }).finally("경로초기화완료")
 
   SetShowErrorOccured(false)
-  // Map 상 Tilemap 제외 Layer를 모두 삭제하여 초기화
-  deleteAllLayer(mapstate)
+  
   // 클릭 이벤트를 통해 좌표를 획득하는 콜백함수
   const aquireclickcoord = (evt)=>{
     var coord = evt.coordinate;
@@ -416,6 +432,7 @@ export const setDistance = ({distance},SetLimitDistance,startpointcoord,SetTarge
 
 // 거리 설정 완료 후 벡터 생성 Api 전달후 경로를 표현하는 함수
 export const createMultipleRoutes = ({routecnt,slopeopt,checkbox},SetAutoCreateOpt,setLoading,targetpointarr,limitdistance,startpointcoord,SetShowErrorOccured,mapstate,setModalInfo,setShowmodalOpen,reloadRouteByClick,username,setCreatedRouteCnt)=>{
+
   // 경로생성중 상태 지시
   SetAutoCreateOpt(4)
   setLoading(true)
@@ -512,3 +529,4 @@ export const retrieveClickedRoute = (username,clickedLinkName,routecnt,mapstate,
     .finally("클릭을 통해 경로조회 끝")
   }
 }
+
