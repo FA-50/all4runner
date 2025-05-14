@@ -38,3 +38,6 @@ export const retrieveRouteinfoApi = (username)=>apiClient.get(`/retrieveRouteinf
 
 // 경로id를 이용해 경로 데이터를 가져오는 API
 export const retrieveRouteDataByRouteIdApi = (routeid)=>apiClient.get(`/retrieveRouteDataByRoute/${routeid}`)
+
+// 경로삭제
+export const deleteRouteApi = (routeid)=>apiClient.delete(`/deleteRoute/${routeid}`)

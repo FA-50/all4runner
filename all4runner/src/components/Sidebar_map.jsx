@@ -3,7 +3,7 @@ import { FaTimes } from 'react-icons/fa'
 import { useGlobalContext } from '../Context/SidebarContext'
 import { Container, Row , Col } from 'react-bootstrap'
 import {Formik , Field , Form } from "formik"
-import {retrieveRouteStopOverApi,saveRouteApi,retrieveRouteinfoApi,retrieveRouteDataByRouteIdApi} from '../axios/ApiOpenlayers'
+import {retrieveRouteStopOverApi,saveRouteApi,retrieveRouteinfoApi,retrieveRouteDataByRouteIdApi,deleteRouteApi} from '../axios/ApiOpenlayers'
 import {useMapContext} from '../Context/MapContext'
 import { LineString } from 'ol/geom'
 import { Draw } from 'ol/interaction'
@@ -15,7 +15,6 @@ import $ from 'jquery'
 
 import PortalComponent  from '../components/PortalComponent'
 import { useParams } from 'react-router-dom';
-import { TiHeadphones } from 'react-icons/ti'
 
 const SidebarMap = () => {
   const {username} = useParams()  
@@ -141,10 +140,6 @@ const SidebarMap = () => {
         // Draw 기능 종료
         mapstate.removeInteraction(draw)
 
-        // 정보지시 모달창 초기화
-        setIsCreatedRoute(true)
-        SetShowStoreComplete(false)
-
 
         // 포인트 총 갯수
         var totalpointcount = coordarr.length;
@@ -173,6 +168,9 @@ const SidebarMap = () => {
             setActive(false)
             deleteAllLayer(mapstate)
           }
+          // 정보지시 모달창 초기화
+          setIsCreatedRoute(true)
+          SetShowStoreComplete(false)
         })
         .catch((error)=>{
           // 오류발생시 안내문 표시
@@ -182,7 +180,8 @@ const SidebarMap = () => {
           setActive(false)
           deleteAllLayer(mapstate)
         })
-        .finally(console.log("실행끝"))
+        .finally(console.log("실행끝")
+      )
       }
     }
     // 선 생성 이벤트 실행
@@ -217,7 +216,7 @@ const SidebarMap = () => {
     // 생성된 경로 클릭 시
     if (clickedLinkName){
       // 경로 조회 후 생성 함수 실행
-      retrieveClickedRoute(username,clickedLinkName,routecnt,mapstate,SetShowErrorOccured,SetAutoCreateOpt,setLoading,setModalInfo,setShowmodalOpen)
+      retrieveClickedRoute(username,clickedLinkName,routecnt,mapstate,SetShowErrorOccured,SetAutoCreateOpt,setLoading,setModalInfo,setShowmodalOpen,setIsCreatedRoute,SetShowStoreComplete)
     }else{
       console.log("클릭된 벡터 없음")
     }
@@ -310,10 +309,12 @@ const saveRoute = () =>{
   .then((result)=>{
     console.log(result.data)
     SetShowStoreComplete(true)
+    setIsCreatedRoute(false)
   })
   .catch((error)=>{
     console.log("저장실패")
     SetShowStoreComplete(false)
+    setIsCreatedRoute(true)
   })
   .finally(
   )
@@ -363,6 +364,21 @@ const retrieveRouteByRouteId = (routeid)=>{
     deleteAllLayer(mapstate)
   })
   .finally(console.log("실행끝"))
+}
+
+// 경로삭제
+const deleteRoute = (routeid)=>{
+  deleteRouteApi(routeid)
+  .then((result)=>{
+    console.log("삭제성공")
+    retrieveStoredRoute()
+  })
+  .catch((err)=>{
+    console.log("삭제실패")
+  })
+  .finally(
+    
+  )
 }
 
 
@@ -433,7 +449,7 @@ const retrieveRouteByRouteId = (routeid)=>{
         <ul className="links" style={{marginTop:"5px"}}>
         <hr style={{width:"90%"}} />
         <div className="lead">
-          안녕하세요. {username}님!
+          사용자명 : {username}
         </div>
         <hr style={{width:"90%"}} />
           <li>
@@ -572,7 +588,7 @@ const retrieveRouteByRouteId = (routeid)=>{
                 enableReinitialize={true}
                 onSubmit={(value)=>{
                   SetRouteCnt(value.routecnt)
-                  ;createMultipleRoutes(value,SetAutoCreateOpt,setLoading,targetpointarr,limitdistance,startpointcoord,SetShowErrorOccured,mapstate,setModalInfo,setShowmodalOpen,reloadRouteByClick,username,setCreatedRouteCnt)}}>
+                  ;createMultipleRoutes(value,SetAutoCreateOpt,setLoading,targetpointarr,limitdistance,startpointcoord,SetShowErrorOccured,mapstate,setModalInfo,setShowmodalOpen,reloadRouteByClick,username,setCreatedRouteCnt,SetShowStoreComplete,setIsCreatedRoute)}}>
                   {
                     (props)=>(
                       <Form className="container-fluid">
@@ -661,11 +677,24 @@ const retrieveRouteByRouteId = (routeid)=>{
                           <Row>
                             <div className="list-group">
                               {storedRouteid.map((item,i)=>{
-                              return (<button key={i} type="button" className="list-group-item list-group-item-action" onClick={()=>{retrieveRouteByRouteId(item)}}>
-                                <div className="ms-2 me-auto">
-                                  <div className="fw-bold">경로ID : {item}</div>
-                                </div>
-                              </button>)
+                              return (
+                              <Container>
+                                <Row>
+                                  <Col xs={8} md={8} lg={8}>
+                                    <button key={i} type="button" className="list-group-item list-group-item-action" onClick={()=>{retrieveRouteByRouteId(item)}}>
+                                      <div className="ms-2 me-auto">
+                                        <div className="fw-bold">경로ID : {item}</div>
+                                      </div>
+                                    </button>
+                                  </Col>
+                                  <Col xs={4} md={4} lg={4}>
+                                    <button type="button" className="btn btn-danger" onClick={()=>{deleteRoute(item)}}>
+                                      삭제
+                                    </button>
+                                  </Col>
+                                </Row>
+                              </Container>
+                              )
                             })}
                             </div>
                           </Row>
