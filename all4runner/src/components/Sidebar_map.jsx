@@ -70,8 +70,7 @@ const SidebarMap = () => {
 
   // 시점,중간점, 종점을 마우스 클릭하여 경로를 생성하는 콜백함수
   const createRoutebyClick = ({slopeopt,checkbox})=>{
-    setIsCreatedRoute(true)
-    SetShowStoreComplete(false)
+    
     setIsAuto(false)
     // 거리제한 없음
     var distanceshort ;
@@ -141,6 +140,10 @@ const SidebarMap = () => {
         setShowGuide1(false)
         // Draw 기능 종료
         mapstate.removeInteraction(draw)
+
+        // 정보지시 모달창 초기화
+        setIsCreatedRoute(true)
+        SetShowStoreComplete(false)
 
 
         // 포인트 총 갯수

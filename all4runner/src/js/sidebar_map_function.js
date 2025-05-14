@@ -379,9 +379,6 @@ export const makingHttpRequestBody = (slopeopt,totalpointcount,coordarr,distance
 
 // 자동경로 생성 시 시점을 지정하는 콜백함수
 export const setStartPoint = (mapstate,SetShowErrorOccured,SetStartPointCoord,SetAutoCreateOpt,username,SetShowStoreComplete,setIsCreatedRoute)=>{
-  setIsCreatedRoute(true)
-  SetShowStoreComplete(false)
-
    // username을 전달하여 경로를 생성할 DB 경로 Table 초기화
   initDBRouteTableApi(username)
   .then((result)=>{
@@ -442,6 +439,10 @@ export const createMultipleRoutes = ({routecnt,slopeopt,checkbox},SetAutoCreateO
   // 경로생성중 상태 지시
   SetAutoCreateOpt(4)
   setLoading(true)
+
+  // 정보지시 모달창 초기화
+  setIsCreatedRoute(true)
+  SetShowStoreComplete(false)
 
 // 지도 상 모든 벡터레이어 삭제
   deleteAllLayer(mapstate)
