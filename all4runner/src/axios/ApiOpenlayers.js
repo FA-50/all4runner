@@ -29,3 +29,12 @@ export const retrieveRouteApi = (httprequestobject)=> apiClient.post('/retrieveR
 export const retrieveRouteByClick = (httprequestobject)=> apiClient.post('/retrieveRouteByClick',httprequestobject)
 
 export const createAccountApi = (httprequestobject)=>apiClient.post('/createAccount',httprequestobject)
+
+// 경로 저장을 위해 로그인한 계정명과 현재 테이블명을 전송하는 API
+export const saveRouteApi = (username,linktablenm)=>apiClient.post(`/saveRoute/${username}/${linktablenm}`)
+
+// 각 계정 저장된 경로정보를 조회하기위해 전송하는 API
+export const retrieveRouteinfoApi = (username)=>apiClient.get(`/retrieveRouteinfo/${username}`)
+
+// 경로id를 이용해 경로 데이터를 가져오는 API
+export const retrieveRouteDataByRouteIdApi = (routeid)=>apiClient.get(`/retrieveRouteDataByRoute/${routeid}`)

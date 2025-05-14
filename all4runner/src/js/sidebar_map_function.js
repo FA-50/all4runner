@@ -280,7 +280,8 @@ export const AddingJSONLayerToMap = ( jsonarr , mapstate,setShowGuide2,setLoadin
       drinkcnt:countarr[3],
       totkcal:countarr[4],
       avgslope:countarr[5],
-      totruntime:countarr[6]
+      totruntime:countarr[6],
+      linktablenm:jsonarr[0].linktablename
     }
   }
 }
@@ -325,7 +326,8 @@ export const createRouteOnMap = (jsonarr,mapstate,SetShowErrorOccured,SetAutoCre
     drinkcnt:countarr[3],
     totkcal:countarr[4],
     avgslope:countarr[5],
-    totruntime:countarr[6]
+    totruntime:countarr[6],
+    linktablenm:jsonarr[0].linktablename
   }
 }
 
@@ -376,7 +378,10 @@ export const makingHttpRequestBody = (slopeopt,totalpointcount,coordarr,distance
 }
 
 // 자동경로 생성 시 시점을 지정하는 콜백함수
-export const setStartPoint = (mapstate,SetShowErrorOccured,SetStartPointCoord,SetAutoCreateOpt,username)=>{
+export const setStartPoint = (mapstate,SetShowErrorOccured,SetStartPointCoord,SetAutoCreateOpt,username,SetShowStoreComplete,setIsCreatedRoute)=>{
+  setIsCreatedRoute(true)
+  SetShowStoreComplete(false)
+
    // username을 전달하여 경로를 생성할 DB 경로 Table 초기화
   initDBRouteTableApi(username)
   .then((result)=>{
@@ -433,9 +438,13 @@ export const setDistance = ({distance},SetLimitDistance,startpointcoord,SetTarge
 // 거리 설정 완료 후 벡터 생성 Api 전달후 경로를 표현하는 함수
 export const createMultipleRoutes = ({routecnt,slopeopt,checkbox},SetAutoCreateOpt,setLoading,targetpointarr,limitdistance,startpointcoord,SetShowErrorOccured,mapstate,setModalInfo,setShowmodalOpen,reloadRouteByClick,username,setCreatedRouteCnt)=>{
 
+  
   // 경로생성중 상태 지시
   SetAutoCreateOpt(4)
   setLoading(true)
+
+// 지도 상 모든 벡터레이어 삭제
+  deleteAllLayer(mapstate)
 
   // 경로 생성 및 최적경로 조회
   createAndLoadRoute(routecnt,targetpointarr,checkbox,startpointcoord,limitdistance,slopeopt,mapstate,SetShowErrorOccured,SetAutoCreateOpt,setLoading,setModalInfo,setShowmodalOpen,reloadRouteByClick,username,setCreatedRouteCnt)

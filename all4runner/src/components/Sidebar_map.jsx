@@ -3,7 +3,7 @@ import { FaTimes } from 'react-icons/fa'
 import { useGlobalContext } from '../Context/SidebarContext'
 import { Container, Row , Col } from 'react-bootstrap'
 import {Formik , Field , Form } from "formik"
-import {retrieveRouteStopOverApi} from '../axios/ApiOpenlayers'
+import {retrieveRouteStopOverApi,saveRouteApi,retrieveRouteinfoApi,retrieveRouteDataByRouteIdApi} from '../axios/ApiOpenlayers'
 import {useMapContext} from '../Context/MapContext'
 import { LineString } from 'ol/geom'
 import { Draw } from 'ol/interaction'
@@ -49,7 +49,7 @@ const SidebarMap = () => {
   
 
   // Modal에 지시할 정보의 초기값 정의
-  const [modalinfo,setModalInfo] = useState({totdistance:0,crosswalkcnt:0,bridgecnt:0,tunnelcnt:0,drinkcnt:0,toiletcnt:0,totkcal:0,avgslope:0,totruntime:0});
+  const [modalinfo,setModalInfo] = useState({totdistance:0,crosswalkcnt:0,bridgecnt:0,tunnelcnt:0,drinkcnt:0,toiletcnt:0,totkcal:0,avgslope:0,totruntime:0,linktablenm:""});
 
 
   // 최적경로자동생성 조작 Process 옵션
@@ -70,6 +70,8 @@ const SidebarMap = () => {
 
   // 시점,중간점, 종점을 마우스 클릭하여 경로를 생성하는 콜백함수
   const createRoutebyClick = ({slopeopt,checkbox})=>{
+    setIsCreatedRoute(true)
+    SetShowStoreComplete(false)
     setIsAuto(false)
     // 거리제한 없음
     var distanceshort ;
@@ -243,7 +245,7 @@ const [ pagenum , setPageNum ]= useState(1);
 // 검색결과 표시
 const [ showSearchResult,setShowSearchResult] = useState(false);
 
-
+// ajax 실행 후 검색결과 저장장
 const [ storedResult, setStoredResult ] = useState([])
 
   // Vworld 검색엔진을 사용하여 검색
@@ -284,7 +286,7 @@ const searchByVworld = ({searchvalue}) =>{
   })
 }
 
-// Ajax 실행 후
+// Ajax 실행 후 결과를 State에 저장
 const showResults = (response)=>{
   if ( response.status === "OK" ){
     setStoredResult(response.result.items);
@@ -295,6 +297,72 @@ const showResults = (response)=>{
   }
 }
 
+// 경로 저장 완료 시 지시
+const [showStoreComplete,SetShowStoreComplete]= useState(false)
+
+// 현재 표현된 경로를 저장
+const saveRoute = () =>{
+
+  saveRouteApi(username,modalinfo.linktablenm)
+  .then((result)=>{
+    console.log(result.data)
+    SetShowStoreComplete(true)
+  })
+  .catch((error)=>{
+    console.log("저장실패")
+    SetShowStoreComplete(false)
+  })
+  .finally(
+  )
+
+}
+
+// DB에서 로그인된 계정에 할당된 routeid를 가져와서 저장.
+const [ storedRouteid, setStoredRouteid ] = useState([])
+
+// 경로를 생성하는 경우 modal창에 경로저장버튼을 지시하고,
+// 경로를 조회하는경우 경로저장버튼 숨기기기
+const [ isCreatedRoute , setIsCreatedRoute ] = useState(true) 
+
+// 각 계정에 저장된 경로정보를 조회
+const retrieveStoredRoute = ()=>{
+  retrieveRouteinfoApi(username)
+  .then((result)=>{
+    setStoredRouteid(result.data)
+  })
+  .catch((error)=>{
+    console.log(error)
+  })
+  .finally(
+  )
+}
+
+// 경로정보 클릭 시 경로 불러오기
+const retrieveRouteByRouteId = (routeid)=>{
+  
+  retrieveRouteDataByRouteIdApi(routeid)
+  .then((result)=>{
+    console.log(result.data)
+    if (result.data.length > 0){
+      // Map상에 link 생성 후 link 정보 반환.
+      setModalInfo(AddingJSONLayerToMap(result.data,mapstate,setShowGuide2,setLoading,setActive,setShowmodalOpen))
+      setIsCreatedRoute(false)
+    }else{
+      setModalInfo({totdistance:0,crosswalkcnt:0,bridgecnt:0,tunnelcnt:0,drinkcnt:0,toiletcnt:0,totkcal:0,avgslope:0,totruntime:0})
+      setShowmodalOpen(false)
+      setIsCreatedRoute(false)
+      deleteAllLayer(mapstate)
+    }
+  })
+  .catch((error)=>{
+    // 오류발생시 안내문 표시
+    console.log(error)
+    deleteAllLayer(mapstate)
+  })
+  .finally(console.log("실행끝"))
+}
+
+
   return (
     <>
     {/* ReactDOM.createPortal을 이용해 경로정보표현 */ }
@@ -302,7 +370,7 @@ const showResults = (response)=>{
         <div className={`${isShowmodalOpen ?"card border-dark mb-3 attributemodal":"" }`} style={{position: 'fixed', zIndex: 1000,width:"30vh"}}>
             <Container className="card-header">
               <Row>
-                <Col xs={10} md={10} lg={10}>생성된 경로 정보</Col>
+                <Col xs={10} md={10} lg={10}>경로 정보</Col>
                 <Col xs={2} md={2} lg={2}><button className="closemodal" onClick={()=>{setShowmodalOpen(false)}}><FaTimes/></button></Col>
               </Row>
             </Container>
@@ -343,6 +411,17 @@ const showResults = (response)=>{
                   <p className="card-text" style={{margin:"2px"}}>인접급수대 수 : {modalinfo.drinkcnt}</p>
                 </Col>
               </Row>
+              <Row>
+                {/* 경로를 새로 생성한 경우에만 경로저장버튼 활성화 */}
+                {isCreatedRoute? 
+                  <button className="btn btn-primary" style={{marginTop:"20px" ,width:"150px"}}
+                onClick={()=>{saveRoute()}}>
+                  경로 저장
+                </button>
+                : <></>}
+                {/* 저장완료 지시 */}
+                {showStoreComplete ? <p className="card-text" style={{marginTop:"20px" }}>저장완료</p> : <></>}
+              </Row>
             </Container>
         </div>
       </PortalComponent>
@@ -363,9 +442,10 @@ const showResults = (response)=>{
                   옵션
                   </button>
                   <ul className="dropdown-menu">
-                    <li><button className="dropdown-item" onClick={()=>{setExploreOption(1)}}>경로계획</button></li>
+                    <li><button className="dropdown-item" onClick={()=>{setExploreOption(1)}}>경로생성</button></li>
                     <li><button className="dropdown-item" onClick={()=>{setExploreOption(2)}}>경로탐색</button></li>
-                    <li><button className="dropdown-item" onClick={()=>{setExploreOption(3)}}>위치검색</button></li>
+                    <li><button className="dropdown-item" onClick={()=>{setExploreOption(3)}}>저장경로조회</button></li>
+                    <li><button className="dropdown-item" onClick={()=>{setExploreOption(4)}}>위치검색</button></li>
                   </ul>
                 </div>
               </Col>
@@ -384,7 +464,7 @@ const showResults = (response)=>{
           <hr style={{width:"90%"}} />
           { exploreopt === 1 ? 
             <li>
-            <h3>최적경로계획</h3>
+            <h3>경로생성</h3>
             <hr style={{width:"50%"}} />
               {
                 <Formik initialValues={{ slopeopt:1,checkbox :  []}}
@@ -446,11 +526,11 @@ const showResults = (response)=>{
           : <div/>}
           { exploreopt === 2 ?
           <li>
-            <h3>최적경로탐색</h3>
+            <h3>경로자동탐색</h3>
             <hr style={{width:"50%"}} />
               { autoCreateOpt === 0 ? 
                 <button type="submit" className="btn btn-primary"
-                onClick={()=>{setIsAuto(true);SetAutoCreateOpt(1);setStartPoint(mapstate,SetShowErrorOccured,SetStartPointCoord,SetAutoCreateOpt,username)}}>
+                onClick={()=>{setIsAuto(true);SetAutoCreateOpt(1);setStartPoint(mapstate,SetShowErrorOccured,SetStartPointCoord,SetAutoCreateOpt,username,SetShowStoreComplete,setIsCreatedRoute)}}>
                   시작점 지정
                 </button>
               : 
@@ -552,8 +632,48 @@ const showResults = (response)=>{
               </div> : <></> }
           </li>
           : <div/>}
+
+          {/* 저장된 경로 조회하기 */}
+          { exploreopt === 3 ? 
+          <Formik
+            initialValues={{searchvalue:""}}
+            enableReinitialize={true}
+          >
+            {
+              (props)=>(
+                <Form className="d-flex" role="search" style={{width:"40vh"}}>
+                        <Container>
+                          <Row>
+                            <Col xs={8} md={8} lg={8}>
+                              <h3>저장경로조회</h3>
+                            </Col>
+                            <Col xs={4} md={4} lg={4}>
+                            <button className="btn btn-primary" style={{}} type="button"
+                onClick={()=>retrieveStoredRoute()}>
+                  조회
+                </button>
+                            </Col>
+                          </Row>
+                          <hr style={{width:"50%", marginTop:"3px"}} />
+                          <Row>
+                            <div className="list-group">
+                              {storedRouteid.map((item,i)=>{
+                              return (<button key={i} type="button" className="list-group-item list-group-item-action" onClick={()=>{retrieveRouteByRouteId(item)}}>
+                                <div className="ms-2 me-auto">
+                                  <div className="fw-bold">경로ID : {item}</div>
+                                </div>
+                              </button>)
+                            })}
+                            </div>
+                          </Row>
+                        <hr style={{width:"100%"}} />
+                        </Container>       
+                </Form>
+              )
+            }
+          </Formik> : <></>}
           {/* 검색의 경우 */}
-          { exploreopt === 3 ?
+          { exploreopt === 4 ?
           <Formik
             initialValues={{searchvalue:""}}
             enableReinitialize={true}
@@ -576,12 +696,12 @@ const showResults = (response)=>{
                           </Row>
                           <Row>
                             <Col xs={6} md={6} lg={6}>
-                              <button className="btn btn-primary" onClick={()=>deleteAllLayer(mapstate)} style={{marginTop:10}}>아이콘 삭제</button>
+                              <button className="btn btn-primary" onClick={()=>deleteAllLayer(mapstate)} type="button" style={{marginTop:10}}>아이콘 삭제</button>
                             </Col>
                           </Row>
                         <hr style={{width:"100%"}} />
                           {/* 검색결과 */}
-                          <div className="list-group" id="searchResult">
+                          <div className="list-group" >
                             {showSearchResult? 
 
                               storedResult.map((item,i)=>{
