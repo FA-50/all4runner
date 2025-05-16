@@ -128,12 +128,12 @@ export const MakeFeatureFromJSON = (jsonarr,mapstate) =>{
   var prelinktype=["일반"];
   jsonarr.map((json)=>{
     var { crosswalk,bridge,geojson,tunnel,
-      drinklat,drinklong,toiletlat,toiletlong,kcal,slope,toblertime
-    } = json
+      drinklat,drinklong,toiletlat,toiletlong,kcal,slope
+    ,avgtime} = json
 
     totkcal+=kcal;
     totslope+=slope;
-    totruntime+=toblertime;
+    totruntime+=avgtime;
 
     var drawSelectColorOption
     try{

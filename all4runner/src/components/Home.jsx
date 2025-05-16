@@ -47,12 +47,11 @@ const Home = () =>{
   }
 
   // 계정생성
-  const createAccount=({userid2,userpw2,avgspeed,maxspeed,userweight})=>{
+  const createAccount=({userid2,userpw2,avgspeed,userweight})=>{
     const HttpRequestBody={
       username:userid2,
       password:userpw2,
       avgspeed:avgspeed,
-      maxspeed:maxspeed,
       userweight:userweight
     }
     createAccountApi(HttpRequestBody)
@@ -95,7 +94,7 @@ const Home = () =>{
                   })}
                 </ul>
         <h1 className="display-4">All 4 Runner</h1>
-        <p className="lead">서울시내 최적 러닝코스를 추천	하는 웹 기반 지도어플리케이션.
+        <p className="lead">서울시내 최적 러닝코스를 추천하는 웹 기반 지도어플리케이션.
         </p>
         <hr className="my-4"/>
         <div className="container" style={{backgroundColor:"#FFFFFF", padding:"10px" , border: "2px solid black", borderRadius:"2px" }}>
@@ -151,7 +150,7 @@ const Home = () =>{
               </Col>
               <Col xs={6} md={6} lg={6}>
                 <Formik
-                  initialValues={{avgspeed:1,maxspeed:1,userid2:"",userpw2:"",userweight:1}}
+                  initialValues={{avgspeed:1,userid2:"",userpw2:"",userweight:1}}
                   enableReinitialize={true}
                   onSubmit={(value)=>{createAccount(value)}}
                   validate = {validateSignUpForm}
@@ -188,17 +187,7 @@ const Home = () =>{
                           <Col xs={2} md={2} lg={2}>
                             <Field type="number" min="1" max="20" name="avgspeed" className="form-control" id="avgspeed"/>
                           </Col>
-                          <Col xs={4} md={4} lg={4}>
-                            <label htmlFor="maxspeed" className="lead">
-                                최대러닝속도(km/h)
-                              </label>
-                          </Col>
-                          <Col xs={2} md={2} lg={2}>
-                            <Field type="number" min="1" max="20"  name="maxspeed" className="form-control" id="maxspeed"/>
-                          </Col>
-                        </Row>
-                        <Row>
-                          <Col xs={4} md={4} lg={4}>
+                          <Col xs={3} md={3} lg={3}>
                             <label htmlFor="userweight" className="lead">
                                 체중(kg)
                               </label>
@@ -206,6 +195,8 @@ const Home = () =>{
                           <Col xs={2} md={2} lg={2}>
                             <Field type="number" min="1" max="200"  name="userweight" className="form-control" id="userweight"/>
                           </Col>
+                        </Row>
+                        <Row>
                           <Col xs={6} md={6} lg={6}>
                           <button type="submit" className="btn btn-primary">회원가입</button> 
                           </Col>

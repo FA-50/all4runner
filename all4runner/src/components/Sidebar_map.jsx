@@ -346,7 +346,6 @@ const retrieveRouteByRouteId = (routeid)=>{
   
   retrieveRouteDataByRouteIdApi(routeid)
   .then((result)=>{
-    console.log(result.data)
     if (result.data.length > 0){
       // Map상에 link 생성 후 link 정보 반환.
       setModalInfo(AddingJSONLayerToMap(result.data,mapstate,setShowGuide2,setLoading,setActive,setShowmodalOpen))
@@ -461,7 +460,7 @@ const deleteRoute = (routeid)=>{
                   옵션
                   </button>
                   <ul className="dropdown-menu">
-                    <li><button className="dropdown-item" onClick={()=>{setExploreOption(1)}}>경로생성</button></li>
+                    <li><button className="dropdown-item" onClick={()=>{setExploreOption(1)}}>경로계획</button></li>
                     <li><button className="dropdown-item" onClick={()=>{setExploreOption(2)}}>경로탐색</button></li>
                     <li><button className="dropdown-item" onClick={()=>{setExploreOption(3)}}>저장경로조회</button></li>
                     <li><button className="dropdown-item" onClick={()=>{setExploreOption(4)}}>위치검색</button></li>
@@ -495,7 +494,7 @@ const deleteRoute = (routeid)=>{
                           <Container>
                             <Row>
                               <fieldset className="form-group">
-                                <label htmlFor="slopeid" className="form-label">경사 필터</label>
+                                <label htmlFor="slopeid" className="form-label">최대경사도 제한</label>
                                 <Field type="range" name="slopeopt" className="form-range" min="1" max="20" step="1" id="slopeid" style={{width:"90%"}}/>
                               </fieldset>
                             </Row>
@@ -545,7 +544,7 @@ const deleteRoute = (routeid)=>{
           : <div/>}
           { exploreopt === 2 ?
           <li>
-            <h3>경로자동탐색</h3>
+            <h3>경로탐색</h3>
             <hr style={{width:"50%"}} />
               { autoCreateOpt === 0 ? 
                 <button type="submit" className="btn btn-primary"
@@ -605,7 +604,7 @@ const deleteRoute = (routeid)=>{
                             <Row style={{marginTop:10}}>
                               <hr style={{width:"90%"}} />
                               <fieldset className="form-group">
-                                <label htmlFor="slopeid" className="form-label">경사 필터</label>
+                                <label htmlFor="slopeid" className="form-label">최대경사도 제한</label>
                                 <Field type="range" name="slopeopt" className="form-range" min="1" max="20" step="1" id="slopeid" style={{width:"90%"}}/>
                               </fieldset>
                             </Row>
@@ -633,7 +632,7 @@ const deleteRoute = (routeid)=>{
                             <Row style={{marginTop:10}}>
                               <hr style={{width:"90%"}} />
                               <Col xs={6} md={6} lg={6}>
-                                <button type="submit" className="btn btn-primary" style={{marginTop:10}}>경로생성</button> 
+                                <button type="submit" className="btn btn-primary" style={{marginTop:10}}>경로탐색</button> 
                               </Col>
                             </Row>
                             <hr style={{width:"90%"}} />
@@ -688,7 +687,7 @@ const deleteRoute = (routeid)=>{
                                     </button>
                                   </Col>
                                   <Col xs={4} md={4} lg={4}>
-                                    <button type="button" className="btn btn-danger" onClick={()=>{deleteRoute(item)}}>
+                                    <button key={i} type="button" className="btn btn-danger" onClick={()=>{deleteRoute(item)}}>
                                       삭제
                                     </button>
                                   </Col>
@@ -715,7 +714,7 @@ const deleteRoute = (routeid)=>{
                       <Form className="d-flex" role="search" style={{width:"40vh"}}>
                         <Container>
                           <Row>
-                            <h3>장소검색</h3>
+                            <h3>위치검색</h3>
                             <hr style={{width:"50%", marginTop:"3px"}} />
                           </Row>
                           <Row>
