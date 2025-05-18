@@ -244,19 +244,22 @@ const SidebarMap = () => {
 // 검색 시 page 번호
 const [ pagenum , setPageNum ]= useState(1); 
 
+// 검색 키워드
+const [ pageSearch , setPageSearch ] = useState("");
+
 // 검색결과 표시
 const [ showSearchResult,setShowSearchResult] = useState(false);
 
-// ajax 실행 후 검색결과 저장장
-const [ storedResult, setStoredResult ] = useState([])
+// ajax 실행 후 검색결과 저장
+const [ storedResult, setStoredResult ] = useState("")
 
   // Vworld 검색엔진을 사용하여 검색
-const searchByVworld = ({searchvalue}) =>{
+const searchByVworld = (value,pagenumber) =>{
 
   setStoredResult([]);
   setShowSearchResult(false);
 
-  var keyword = searchvalue;
+  var keyword = value;
   var params = {
     service : "search",
     request : "search",
@@ -264,8 +267,8 @@ const searchByVworld = ({searchvalue}) =>{
     crs : "EPSG:4326",
     // 4326 기준 서울시 범위
     bbox : "126.7644,37.4133,127.1831,37.7151",
-    size : 5 , 
-    page : pagenum,
+    size : 4 , 
+    page : pagenumber,
     query : keyword,
     type : 'PLACE',
     format : 'json',
@@ -298,6 +301,11 @@ const showResults = (response)=>{
     setShowSearchResult(false)
   }
 }
+
+useEffect(() => {
+  searchByVworld(pageSearch, pagenum);
+}, [pagenum,pageSearch]);
+
 
 // 경로 저장 완료 시 지시
 const [showStoreComplete,SetShowStoreComplete]= useState(false)
@@ -379,6 +387,7 @@ const deleteRoute = (routeid)=>{
     
   )
 }
+
 
 
   return (
@@ -482,7 +491,7 @@ const deleteRoute = (routeid)=>{
           <hr style={{width:"90%"}} />
           { exploreopt === 1 ? 
             <li>
-            <h3>경로생성</h3>
+            <h3>경로계획</h3>
             <hr style={{width:"50%"}} />
               {
                 <Formik initialValues={{ slopeopt:1,checkbox :  []}}
@@ -708,13 +717,20 @@ const deleteRoute = (routeid)=>{
           <Formik
             initialValues={{searchvalue:""}}
             enableReinitialize={true}
-            onSubmit={(value)=>{searchByVworld(value,mapstate,pagenum , setPageNum)}}>
+            onSubmit={(value)=>{
+              setPageNum(1);
+              setPageSearch(value.searchvalue);}}>
                   {
                     (props)=>(
                       <Form className="d-flex" role="search" style={{width:"40vh"}}>
                         <Container>
                           <Row>
+                            <Col xs={6} md={6} lg={6}>
                             <h3>위치검색</h3>
+                            </Col>
+                            <Col xs={6} md={6} lg={6}>
+                              <button className="btn btn-primary" onClick={()=>deleteAllLayer(mapstate)} type="button" style={{marginTop:10}}>아이콘 삭제</button>
+                            </Col>
                             <hr style={{width:"50%", marginTop:"3px"}} />
                           </Row>
                           <Row>
@@ -723,11 +739,6 @@ const deleteRoute = (routeid)=>{
                             </Col>
                             <Col xs={4} md={4} lg={4}>
                               <button className="btn btn-outline-success" type="submit">Search</button>
-                            </Col>
-                          </Row>
-                          <Row>
-                            <Col xs={6} md={6} lg={6}>
-                              <button className="btn btn-primary" onClick={()=>deleteAllLayer(mapstate)} type="button" style={{marginTop:10}}>아이콘 삭제</button>
                             </Col>
                           </Row>
                         <hr style={{width:"100%"}} />
@@ -744,18 +755,32 @@ const deleteRoute = (routeid)=>{
                                   </div>
                                 </button>)
                               })
-
                             :
-                            
                             <button type="button" className="list-group-item list-group-item-action">
                                   <div className="ms-2 me-auto">
                                     <div className="fw-bold">검색결과 없음</div>
                                   </div>
                                 </button>
-                            
                             }
                           </div>
                         <hr style={{width:"100%"}} />
+                        <Row>
+                          <Col>
+                          <button className="btn btn-primary" type="button" onClick={
+                            ()=>{
+                              if (pagenum > 1)
+                                { setPageNum((pagenum)=>pagenum-1)
+                                }
+                              else{
+                                setPageNum(1)
+                              }
+                              }}>◀</button>
+                          <button className="btn btn-primary" type="button" onClick={
+                            ()=>{
+                              setPageNum((pagenum)=>pagenum+1)
+                              }}>▶</button>
+                          </Col>
+                        </Row>
                         </Container>       
                       </Form>
                     )

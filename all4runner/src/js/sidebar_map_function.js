@@ -58,7 +58,7 @@ export const createPoint=(coord,opt,mapstate)=>{
         image: new Icon({
           anchor: [0.2, 1.1],
           src: '/img/toilet.png', // 아이콘 이미지 URL
-          scale: 0.05,
+          scale: 0.1,
         })
       })
       break;
@@ -96,10 +96,22 @@ export const createPoint=(coord,opt,mapstate)=>{
   var pointvectorsource = new VectorSource({
     features:[pointfeature]
   })
-  var pointvectorlayer = new VectorLayer({
+  
+  var pointvectorlayer;
+  if ( opt === 1 || opt === 2 ){
+    pointvectorlayer = new VectorLayer({
+    source : pointvectorsource,
+    zIndex : 101,
+    minZoom : 15
+    })
+    console.log(opt)
+  } else{
+    pointvectorlayer = new VectorLayer({
     source : pointvectorsource,
     zIndex : 101
-  })
+    })
+  }
+  
   
   mapstate.addLayer(pointvectorlayer)
   mapstate.render()
